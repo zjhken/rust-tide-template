@@ -22,6 +22,7 @@ sea-query = { version = "0.30.7", default-features = false, features = [
 ] }
 serde = { version = "1.0.197", features = ["derive"] }
 tikv-jemallocator = "0.5.4"
+surf = { version = "2.3.2", default-features = false, features = ["h1-client-rustls", "rustls_crate"] }
 
 
 [profile.release]
