@@ -7,7 +7,7 @@ use sea_query::{Expr, Iden, QueryStatementWriter, SqliteQueryBuilder};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 use tracing::info;
 
-static DB_POOL: OnceLock<Pool<Sqlite>> = OnceLock::new();
+pub static DB_POOL: OnceLock<Pool<Sqlite>> = OnceLock::new();
 
 pub fn init_db_pool(pool: Pool<Sqlite>) -> &'static Pool<Sqlite> {
     DB_POOL.get_or_init(|| pool)
