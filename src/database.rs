@@ -3,7 +3,9 @@ use std::sync::OnceLock;
 use anyhow::{anyhow, Ok, Result};
 use anyhow_ext::Context;
 use async_std::sync::Mutex;
-use sea_query::{Expr, Iden, QueryStatementWriter, SqliteQueryBuilder};
+use sea_query::{
+    ColumnDef, Expr, ForeignKey, Iden, QueryStatementWriter, SqliteQueryBuilder, Table, Value,
+};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 use tracing::info;
 
@@ -46,6 +48,31 @@ async fn ensure_db_file(db_url: &str) -> Result<()> {
 
 async fn ensure_tables() -> Result<()> {
     let pool = get_db_pool();
+
+    let sql = Table::create()
+        .table(User::Table)
+        .if_not_exists()
+        .col(
+            ColumnDef::new(User::Id)
+                .integer()
+                .not_null()
+                .auto_increment()
+                .primary_key(),
+        )
+        .col(ColumnDef::new(User::Age).integer().not_null())
+        .col(ColumnDef::new(User::Username).string().not_null())
+        .col(ColumnDef::new(User::Password).string().not_null())
+        .col(ColumnDef::new(User::Id).uuid().default(Value::Int(None)))
+        // .foreign_key(
+        //     ForeignKey::create()
+        //         .name("FK_2e303c3a712662f1fc2a4d0aad6")
+        //         .from(User::Table, User::FontId)
+        //         .to(Font::Table, Font::Id)
+        //         .on_delete(ForeignKeyAction::Cascade)
+        //         .on_update(ForeignKeyAction::Cascade)
+        // )
+        .to_string(SqliteQueryBuilder);
+
     let sql = sea_query::Query::select()
         .column(User::Username)
         .from(User::Table)
