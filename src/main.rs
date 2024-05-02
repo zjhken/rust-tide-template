@@ -21,7 +21,7 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    load_config(cli.config.unwrap_or(".".into()))?;
+    load_config(cli.config.unwrap_or(".config.toml".into()))?;
     init_logger(&get_config().read().unwrap().log_level)?;
     init_database(get_config().read().unwrap().db_url.as_str())?;
     init_http_server_blocking()?;
