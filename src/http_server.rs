@@ -9,7 +9,7 @@ pub fn init_http_server_blocking() -> Result<()> {
 	app.with(AuthMiddleware {});
 
 	app.at("/").get(|_| async { Ok("Hello, world!") });
-	app.at("/user/{}").get(|_| async { Ok("Hello, world!") });
+	app.at("/user/:name").get(|_| async { Ok("Hello, world!") });
 
 	async_std::task::block_on(async {
 		app.listen("0.0.0.0:8888").await?;
