@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow_ext::Result;
 use tide::{Middleware, Next, Request};
 use tracing::debug;
 

@@ -3,23 +3,22 @@ use std::{
 	sync::{OnceLock, RwLock},
 };
 
-use anyhow::Result;
 use anyhow_ext::Context;
+use anyhow_ext::Result;
 use serde::Deserialize;
+use std::fmt::Debug;
 
 static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
 
 pub fn load_config<P>(config_path: P) -> Result<()>
 where
-	P: AsRef<Path>,
+	P: AsRef<Path> + Debug,
 {
-	let data = std::fs::read_to_string(&config_path)
-		.dot()
-		.context(format!(
-			"failed to read config file data, path={:?}",
-			config_path.as_ref()
-		))?;
-	let config: Config = toml::from_str(data.as_str()).dot()?;
+	let data = std::fs::read_to_string(&config_path).context(format!(
+		"failed to read config file data, path={:?}",
+		config_path.as_ref()
+	))?;
+	let config: Config = toml::from_str(data.as_str()).context(format!("{:?}", config_path))?;
 	init_config(config);
 	Ok(())
 }

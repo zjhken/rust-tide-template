@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
-use anyhow::{anyhow, Ok, Result};
 use anyhow_ext::Context;
+use anyhow_ext::{anyhow, Ok, Result};
 use async_std::sync::Mutex;
 use sea_query::{
 	ColumnDef, Expr, ForeignKey, Iden, QueryStatementWriter, SqliteQueryBuilder, Table, Value,
@@ -21,10 +21,10 @@ pub fn get_db_pool() -> &'static Pool<Sqlite> {
 
 pub fn init_database(db_url: &str) -> Result<()> {
 	async_std::task::block_on(async {
-		ensure_db_file(db_url).await.dot()?;
+		ensure_db_file(db_url).await?;
 		let pool = SqlitePoolOptions::new().connect(db_url).await?;
 		let mut _pool = init_db_pool(pool);
-		ensure_tables().await.dot()?;
+		ensure_tables().await?;
 		Ok(())
 	})
 }
@@ -95,11 +95,7 @@ async fn ensure_tables() -> Result<()> {
 		)
 		.to_string(SqliteQueryBuilder);
 
-	let result = sqlx::query(&sql)
-		.bind(&sql)
-		.execute(get_db_pool())
-		.await
-		.dot()?;
+	let result = sqlx::query(&sql).bind(&sql).execute(get_db_pool()).await?;
 
 	todo!("implement your table logic");
 	Ok(())

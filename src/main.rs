@@ -1,13 +1,14 @@
 mod cli;
+mod common;
 mod config;
 mod database;
 mod http_server;
 mod logging;
-mod utils;
 
-use anyhow::Result;
+use anyhow_ext::Result;
 use clap::Parser;
 use http_server::init_http_server_blocking;
+use tracing::info;
 
 use crate::{
 	cli::Cli,
@@ -21,7 +22,8 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 fn main() -> Result<()> {
 	let cli = Cli::parse();
-	load_config(cli.config.unwrap_or("config.toml".into()))?;
+	info!(?cli.config);
+	load_config(cli.config)?;
 	init_logger(&get_config().read().unwrap().log_level)?;
 	init_database(get_config().read().unwrap().db_url.as_str())?;
 	init_http_server_blocking()?;

@@ -3,8 +3,8 @@ use std::{
 	sync::{Mutex, OnceLock},
 };
 
-use anyhow::{Ok, Result};
 use anyhow_ext::Context;
+use anyhow_ext::{Ok, Result};
 use tracing::{info, level_filters::LevelFilter, Level};
 
 use crate::config::LogLevel;
@@ -34,7 +34,7 @@ pub fn init_logger(log_level: &LogLevel) -> Result<()> {
 pub fn reload_log_level(log_level: &LogLevel) -> Result<()> {
 	let new_filter = convert_to_level_filter_level(log_level);
 	let rh = RELOAD_HANDLE.get().unwrap().lock().unwrap();
-	(*rh).modify(|filter| *filter = new_filter).dot()?;
+	(*rh).modify(|filter| *filter = new_filter)?;
 	Ok(())
 }
 
@@ -45,7 +45,7 @@ pub fn init_logger_old(log_level: &LogLevel) -> Result<()> {
 		.with_writer(std::io::stderr)
 		.with_max_level(tracing_log_level)
 		.finish();
-	tracing::subscriber::set_global_default(subscriber).dot()?;
+	tracing::subscriber::set_global_default(subscriber)?;
 
 	// let filter = convert_to_level_filter_level(log_level);
 	// let (filter, reload_handle) =
