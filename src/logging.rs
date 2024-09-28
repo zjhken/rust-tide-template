@@ -16,6 +16,8 @@ use tracing_subscriber::{
 	Registry,
 };
 
+// TODO: use fastrace https://github.com/fast/fastrace/blob/main/fastrace/examples/asynchronous.rs#L13
+
 static RELOAD_HANDLE: OnceLock<Mutex<Handle<LevelFilter, Registry>>> = OnceLock::new();
 
 pub fn init_logger(log_level: &LogLevel) -> Result<()> {
