@@ -1,7 +1,7 @@
 use anyhow_ext::Result;
 
 macro_rules! retry_http {
-	($f:expr, $maxTries:expr, $interval:expr, $retry_http_codes:expr) => {
+	($f:expr, $maxTries:expr, $interval:expr, $retry_http_codes:expr) => {{
 		let mut tries = 0;
 		let result = loop {
 			let result = $f;
@@ -10,7 +10,12 @@ macro_rules! retry_http {
 				Ok(ref resp) => {
 					let status = resp.status();
 					if ($retry_http_codes.contains(&(status as u16))) {
-						tracing::warn!("({}/{}) retry: bad status code. {}", tries, $maxTries, status)
+						tracing::warn!(
+							"({}/{}) retry: bad status code. {}",
+							tries,
+							$maxTries,
+							status
+						);
 						if tries >= $maxTries {
 							tracing::error!("exceed maxTries");
 							break result;
@@ -21,7 +26,7 @@ macro_rules! retry_http {
 					}
 				}
 				Err(ref e) => {
-					tracing::warn!("({}/{}) retry: error. {}", tries, $maxTries, e)
+					tracing::warn!("({}/{}) retry: error. {}", tries, $maxTries, e);
 					if tries >= $maxTries {
 						tracing::error!("exceed maxTries");
 						break result;
@@ -29,8 +34,9 @@ macro_rules! retry_http {
 					async_std::task::sleep(std::time::Duration::from_millis($interval)).await
 				}
 			}
-		}
-	};
+		};
+		result
+	}};
 }
 
 use std::sync::OnceLock;
