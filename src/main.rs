@@ -2,12 +2,12 @@ mod cli;
 mod common;
 mod config;
 mod database;
-mod http_server;
 mod logging;
+mod server;
 
 use anyhow_ext::Result;
 use clap::Parser;
-use http_server::init_http_server_blocking;
+use server::init_http_server_blocking;
 use tracing::info;
 
 use crate::{
@@ -21,11 +21,13 @@ use crate::{
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
 fn main() -> Result<()> {
-	let cli = Cli::parse();
-	info!(?cli.config);
-	load_config(cli.config)?;
-	init_logger(&get_config().read().unwrap().log_level)?;
-	init_database(get_config().read().unwrap().db_url.as_str())?;
-	init_http_server_blocking()?;
-	Ok(())
+	async_std::task::block_on(async {
+		let cli = Cli::parse();
+		info!(?cli.config);
+		load_config(cli.config)?;
+		init_logger(&get_config().read().await.log_level)?;
+		init_database(get_config().read().await.db_url.as_str())?;
+		init_http_server_blocking()?;
+		Ok(())
+	})
 }

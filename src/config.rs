@@ -1,14 +1,29 @@
-use std::{
-	path::Path,
-	sync::{OnceLock, RwLock},
-};
+use std::{path::Path, sync::OnceLock};
+
+use async_std::sync::RwLock;
 
 use anyhow_ext::Context;
 use anyhow_ext::Result;
 use serde::Deserialize;
 use std::fmt::Debug;
 
+use crate::cli::Cli;
+
 static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
+
+pub fn load_from_cli(cli: &Cli) -> Result<()> {
+	let config = Config {
+		port: cli.port,
+		log_level: match cli.verbose {
+			0 => LogLevel::Info,
+			1 => LogLevel::Debug,
+			2.. => LogLevel::Trace,
+		},
+		db_url: cli.db_url.to_owned(),
+	};
+	init_config(config);
+	Ok(())
+}
 
 pub fn load_config<P>(config_path: P) -> Result<()>
 where
@@ -44,4 +59,5 @@ pub enum LogLevel {
 	Debug,
 	Info,
 	Warn,
+	Trace,
 }

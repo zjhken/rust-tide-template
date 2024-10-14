@@ -5,12 +5,15 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
+	#[arg(short, long)]
+	pub port: u16,
 	/// set log level
 	#[arg(short, long, action = clap::ArgAction::Count)]
 	pub verbose: u8,
 
 	/// Optional name to operate on
-	pub name: Option<String>,
+	#[arg(short, long, default_value = "config.toml")]
+	pub db_url: String,
 
 	/// Sets a custom config file
 	#[arg(short, long, value_name = "FILE")]

@@ -65,6 +65,7 @@ fn convert_to_level_filter_level(log_level: &LogLevel) -> LevelFilter {
 		LogLevel::Debug => filter::LevelFilter::DEBUG,
 		LogLevel::Info => filter::LevelFilter::INFO,
 		LogLevel::Warn => filter::LevelFilter::WARN,
+		LogLevel::Trace => filter::LevelFilter::TRACE,
 	};
 }
 
@@ -73,5 +74,6 @@ fn convert_to_tracing_log_level(log_level: &LogLevel) -> Level {
 		LogLevel::Debug => tracing::Level::DEBUG,
 		LogLevel::Info => tracing::Level::INFO,
 		LogLevel::Warn => tracing::Level::WARN,
+		LogLevel::Trace => tracing::Level::TRACE,
 	};
 }
