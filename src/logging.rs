@@ -33,6 +33,22 @@ pub fn init_logger(log_level: &LogLevel) -> Result<()> {
 	Ok(())
 }
 
+pub fn init_logger_remove_tide_log(log_level: &LogLevel) -> Result<()> {
+	let filter = convert_to_level_filter_level(log_level);
+	let (filter, reload_handle) = reload::Layer::new(filter);
+	RELOAD_HANDLE.get_or_init(|| Mutex::new(reload_handle));
+
+	let filter_out_tide_log = tracing_subscriber::filter::filter_fn(|metadata| {
+		!metadata.target().starts_with("tide::log::middleware")
+	});
+	let stderr_layer = tracing_subscriber::fmt::layer().with_writer(std::io::stderr);
+	tracing_subscriber::registry()
+		.with(stderr_layer.with_filter(filter))
+		.with(filter_out_tide_log)
+		.init();
+	Ok(())
+}
+
 pub fn reload_log_level(log_level: &LogLevel) -> Result<()> {
 	let new_filter = convert_to_level_filter_level(log_level);
 	let rh = RELOAD_HANDLE.get().unwrap().lock().unwrap();
