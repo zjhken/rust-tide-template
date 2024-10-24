@@ -47,6 +47,7 @@ async fn ensure_db_file(db_url: &str) -> Result<()> {
 }
 
 async fn ensure_tables() -> Result<()> {
+	// TODO: use sea_query
 	let pool = get_db_pool();
 
 	let sql = Table::create()
