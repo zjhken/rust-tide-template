@@ -12,7 +12,7 @@ use tracing::info;
 
 use crate::{
 	cli::Cli,
-	config::{get_config, load_config},
+	config::{cfg, load_config},
 	database::init_database,
 	logging::init_logger,
 };
@@ -25,8 +25,8 @@ fn main() -> Result<()> {
 		let cli = Cli::parse();
 		info!(?cli.config);
 		load_config(cli.config)?;
-		init_logger(&get_config().read().await.log_level)?;
-		init_database(get_config().read().await.db_url.as_str())?;
+		init_logger(&cfg().await.log_level)?;
+		init_database(cfg().await.db_url.as_str())?;
 		init_http_server_blocking()?;
 		Ok(())
 	})

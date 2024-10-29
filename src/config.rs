@@ -42,8 +42,8 @@ pub fn init_config(config: Config) -> &'static RwLock<Config> {
 	CONFIG.get_or_init(|| RwLock::new(config))
 }
 
-pub fn get_config() -> &'static RwLock<Config> {
-	CONFIG.get().unwrap()
+pub async fn cfg() -> async_std::sync::RwLockReadGuard<'static, Config> {
+	CONFIG.get().unwrap().read().await
 }
 
 #[derive(Deserialize, Default)]

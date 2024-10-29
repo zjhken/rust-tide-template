@@ -1,10 +1,15 @@
-use std::path::PathBuf;
+use core::fmt;
+use std::{default, fmt::write, path::PathBuf};
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use serde::Deserialize;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
+	#[arg(short, long)]
+	pub env: Env,
+
 	#[arg(short, long)]
 	pub port: u16,
 	/// set log level
@@ -36,4 +41,19 @@ pub enum Commands {
 		#[arg(short, long)]
 		list: bool,
 	},
+}
+
+#[derive(Deserialize, ValueEnum, Clone, Debug, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum Env {
+	#[default]
+	Dev,
+	Uat,
+	Prd,
+}
+
+impl fmt::Display for Env {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}", format!("{:?}", self).to_lowercase())
+	}
 }
