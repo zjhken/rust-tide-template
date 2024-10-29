@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 use anyhow_ext::Result;
+use tide::Response;
 use tide::{Middleware, Next, Request};
 use tracing::{debug, error_span, info, info_span, warn, warn_span, Instrument};
 
@@ -10,13 +11,18 @@ pub fn init_http_server_blocking() -> Result<()> {
 
 	app.with(AuthMiddleware {});
 
-	app.at("/").get(|_| async { Ok("Hello, world!") });
-	app.at("/user/:name").get(|_| async { Ok("Hello, world!") });
+	app.at("/")
+		.get(|_| async move { Ok("this is a inline handler") });
+	app.at("/user/:name").get(example_handler);
 
 	async_std::task::block_on(async {
 		app.listen("0.0.0.0:8888").await?;
 		Ok(())
 	})
+}
+
+async fn example_handler(req: Request<()>) -> Result<Response, tide::Error> {
+	Ok(make_resp(200, ""))
 }
 
 struct AuthMiddleware;
@@ -31,6 +37,16 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for AuthMiddleware 
 		// res.insert_header("request-number", count.to_string());
 		Ok(res)
 	}
+}
+
+pub fn make_resp<S>(status: S, body: impl Into<tide::Body>) -> Response
+where
+	S: TryInto<tide::StatusCode>,
+	S::Error: std::fmt::Debug,
+{
+	let mut resp = Response::new(status);
+	resp.set_body(body);
+	return resp;
 }
 
 #[derive(Debug, Default, Clone)]
