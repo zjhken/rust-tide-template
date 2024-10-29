@@ -1,4 +1,5 @@
 use anyhow_ext::Result;
+use surf::Client;
 
 macro_rules! retry_http {
 	($f:expr, $maxTries:expr, $interval:expr, $retry_http_codes:expr) => {{
@@ -44,6 +45,10 @@ use std::sync::OnceLock;
 pub(crate) use retry_http;
 
 pub static HTTP_CLIENT: OnceLock<surf::Client> = OnceLock::new();
+
+pub fn http() -> &'static Client {
+	HTTP_CLIENT.get().unwrap()
+}
 
 pub fn setup_http_client() -> Result<()> {
 	let surf_config = surf::Config::new();
