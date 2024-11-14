@@ -21,7 +21,7 @@ pub fn init_http_server_blocking() -> Result<()> {
 	})
 }
 
-async fn example_handler(req: Request<()>) -> Result<Response, tide::Error> {
+async fn example_handler(req: Request<()>) -> tide::Result<Response> {
 	Ok(make_resp(200, ""))
 }
 
