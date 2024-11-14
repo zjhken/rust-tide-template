@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 use anyhow_ext::Result;
+use surf::StatusCode;
 use tide::Response;
 use tide::{Middleware, Next, Request};
 use tracing::{debug, error_span, info, info_span, warn, warn_span, Instrument};
@@ -22,7 +23,8 @@ pub fn init_http_server_blocking() -> Result<()> {
 }
 
 async fn example_handler(req: Request<()>) -> tide::Result<Response> {
-	Ok(make_resp(200, ""))
+	// cannot use any number as status code
+	Ok(make_resp(StatusCode::Ok, ""))
 }
 
 struct AuthMiddleware;
