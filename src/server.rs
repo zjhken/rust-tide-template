@@ -4,11 +4,12 @@ use anyhow_ext::Result;
 use surf::StatusCode;
 use tide::Response;
 use tide::{Middleware, Next, Request};
-use tracing::{debug, error_span, info, info_span, warn, warn_span, Instrument};
+use tracing::{debug, error, error_span, info, info_span, warn, warn_span, Instrument};
 
 pub fn init_http_server_blocking() -> Result<()> {
 	let mut app = tide::new();
-	app.with(tide::log::LogMiddleware::new());
+	app.with(ErrorHandleMiddleware {});
+	app.with(AccessLogMiddleware {});
 
 	app.with(AuthMiddleware {});
 
@@ -53,18 +54,15 @@ where
 
 #[derive(Debug, Default, Clone)]
 pub struct AccessLogMiddleware;
-impl AccessLogMiddleware {
-	async fn log<'a, State: Clone + Send + Sync + 'static>(
-		&'a self,
-		ctx: Request<State>,
-		next: Next<'a, State>,
-	) -> tide::Result {
-		let path = ctx.url().path().to_owned();
-		let method = ctx.method();
-
-		Ok(async {
+impl AccessLogMiddleware {}
+#[tide::utils::async_trait]
+impl<State: Clone + Send + Sync + 'static> Middleware<State> for AccessLogMiddleware {
+	async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
+		let path = req.url().path().to_owned();
+		let method = req.method();
+		let fut = async {
 			let start = Instant::now();
-			let response = next.run(ctx).await;
+			let response = next.run(req).await;
 			let duration = start.elapsed();
 			let status = response.status();
 
@@ -94,6 +92,20 @@ impl AccessLogMiddleware {
 			span.record("req_id", rusty_ulid::Ulid::generate().to_string());
 			span
 		})
-		.await)
+		.await;
+		return Ok(fut);
+	}
+}
+
+struct ErrorHandleMiddleware;
+#[tide::utils::async_trait]
+impl<State: Clone + Send + Sync + 'static> Middleware<State> for ErrorHandleMiddleware {
+	async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
+		let mut resp = next.run(req).await;
+		if let Some(err) = resp.error() {
+			error!(?err);
+			resp.set_body(format!("{err:?}"));
+		}
+		Ok(resp)
 	}
 }
