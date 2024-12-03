@@ -19,7 +19,6 @@ use tracing_subscriber::{
 // TODO: use fastrace https://github.com/fast/fastrace/blob/main/fastrace/examples/asynchronous.rs#L13
 
 static RELOAD_HANDLE: OnceLock<Mutex<Handle<LevelFilter, Registry>>> = OnceLock::new();
-
 pub fn init_logger(log_level: &LogLevel) -> Result<()> {
 	let filter = convert_to_level_filter_level(log_level);
 	let (filter, reload_handle) = reload::Layer::new(filter);
@@ -28,6 +27,7 @@ pub fn init_logger(log_level: &LogLevel) -> Result<()> {
 	let stderr_layer = tracing_subscriber::fmt::layer().with_writer(std::io::stderr);
 	tracing_subscriber::registry()
 		.with(stderr_layer.with_filter(filter))
+		.with(tracing_subscriber::fmt::layer().pretty())
 		.init();
 
 	Ok(())
