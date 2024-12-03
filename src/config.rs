@@ -1,4 +1,5 @@
-use std::{path::Path, sync::OnceLock};
+use std::path::Path;
+use std::sync::LazyLock;
 
 use async_std::sync::RwLock;
 
@@ -9,9 +10,9 @@ use std::fmt::Debug;
 
 use crate::cli::Cli;
 
-static CONFIG: OnceLock<RwLock<Config>> = OnceLock::new();
+pub static CFG: LazyLock<RwLock<Config>> = LazyLock::new(|| RwLock::new(Config::default()));
 
-pub fn load_from_cli(cli: &Cli) -> Result<()> {
+pub async fn load_from_cli(cli: &Cli) -> Result<()> {
 	let config = Config {
 		port: cli.port,
 		log_level: match cli.verbose {
@@ -21,11 +22,12 @@ pub fn load_from_cli(cli: &Cli) -> Result<()> {
 		},
 		db_url: cli.db_url.to_owned(),
 	};
-	init_config(config);
+	let mut lock = CFG.write().await;
+	*lock = config;
 	Ok(())
 }
 
-pub fn load_config<P>(config_path: P) -> Result<()>
+pub async fn load_config<P>(config_path: P) -> Result<()>
 where
 	P: AsRef<Path> + Debug,
 {
@@ -34,16 +36,9 @@ where
 		config_path.as_ref()
 	))?;
 	let config: Config = toml::from_str(data.as_str()).context(format!("{:?}", config_path))?;
-	init_config(config);
+	let mut lock = CFG.write().await;
+	*lock = config;
 	Ok(())
-}
-
-pub fn init_config(config: Config) -> &'static RwLock<Config> {
-	CONFIG.get_or_init(|| RwLock::new(config))
-}
-
-pub async fn cfg() -> async_std::sync::RwLockReadGuard<'static, Config> {
-	CONFIG.get().unwrap().read().await
 }
 
 #[derive(Deserialize, Default)]
