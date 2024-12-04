@@ -9,6 +9,8 @@ use tracing::{debug, error, error_span, info, info_span, warn, warn_span, Instru
 pub fn init_http_server_blocking() -> Result<()> {
 	let mut app = tide::new();
 	app.with(ErrorHandleMiddleware {});
+	app.with(CorsMiddleware {});
+	app.with(AuthMiddleware {});
 	app.with(AccessLogMiddleware {});
 
 	app.with(AuthMiddleware {});
@@ -107,5 +109,28 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for ErrorHandleMidd
 			resp.set_body(format!("{err:?}"));
 		}
 		Ok(resp)
+	}
+}
+
+struct CorsMiddleware;
+#[tide::utils::async_trait]
+impl<State: Clone + Send + Sync + 'static> Middleware<State> for CorsMiddleware {
+	async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
+		let mut resp = match req.method() {
+			surf::http::Method::Options => make_resp(200, ""),
+			_ => next.run(req).await,
+		};
+		resp.insert_header("Access-Control-Allow-Origin", "http://localhost:5173");
+		resp.insert_header(
+			"Access-Control-Allow-Headers",
+			"Origin, X-Requested-With, Content-Type, Accept",
+		);
+		resp.insert_header(
+			"Access-Control-Allow-Methods",
+			"GET, POST, PUT, DELETE, OPTIONS",
+		);
+		resp.insert_header("Access-Control-Max-Age", "7200 "); // reduce OPTIONS requests. 7200 is Chrome maximum number
+		resp.insert_header("Access-Control-Allow-Credentials", "true"); // reduce OPTIONS requests
+		return Ok(resp);
 	}
 }
