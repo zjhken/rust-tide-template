@@ -21,7 +21,7 @@ fn main() -> Result<()> {
 		let cli = Cli::parse();
 		info!(?cli.config);
 		load_config(cli.config).await?;
-		init_logger(&CFG.read().await.log_level)?;
+		init_logger(&CFG.read().await.log_level.0)?;
 		init_database(CFG.read().await.db_url.as_str())?;
 		init_http_server_blocking()?;
 		Ok(())

@@ -7,18 +7,19 @@ use anyhow_ext::Context;
 use anyhow_ext::Result;
 use serde::Deserialize;
 use std::fmt::Debug;
+use tracing::Level;
 
 use crate::cli::Cli;
 
 pub static CFG: LazyLock<RwLock<Config>> = LazyLock::new(|| RwLock::new(Config::default()));
 
-pub async fn load_from_cli(cli: &Cli) -> Result<()> {
+pub async fn load_config_from_cli(cli: &Cli) -> Result<()> {
 	let config = Config {
 		port: cli.port,
 		log_level: match cli.verbose {
-			0 => LogLevel::Info,
-			1 => LogLevel::Debug,
-			2.. => LogLevel::Trace,
+			0 => LogLevel(Level::INFO),
+			1 => LogLevel(Level::DEBUG),
+			2.. => LogLevel(Level::TRACE),
 		},
 		db_url: cli.db_url.to_owned(),
 	};
@@ -48,11 +49,32 @@ pub struct Config {
 	pub db_url: String,
 }
 
-#[derive(Deserialize, Default)]
-pub enum LogLevel {
-	#[default]
-	Debug,
-	Info,
-	Warn,
-	Trace,
+pub struct LogLevel(pub tracing::Level);
+impl<'de> Deserialize<'de> for LogLevel {
+	fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+	where
+		D: serde::Deserializer<'de>,
+	{
+		let s = String::deserialize(deserializer)?.to_lowercase();
+		match s.as_str() {
+			"trace" => return Ok(LogLevel(Level::TRACE)),
+			"debug" => return Ok(LogLevel(Level::DEBUG)),
+			"info" => return Ok(LogLevel(Level::INFO)),
+			"error" => return Ok(LogLevel(Level::ERROR)),
+			other => {
+				return Err(serde::de::Error::custom(format!(
+					"cannot convert {other} to log level"
+				)))
+			}
+		}
+	}
+}
+impl Default for LogLevel {
+	fn default() -> Self {
+		LogLevel(Level::DEBUG)
+	}
+}
+
+pub async fn cfg() -> async_std::sync::RwLockReadGuard<'static, Config> {
+	return CFG.read().await;
 }
