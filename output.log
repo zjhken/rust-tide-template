@@ -1,0 +1,10 @@
+[2024-12-24T07:45:24.599Z INFO tide::server] Server listening on http://0.0.0.0:8888
+[2024-12-24T07:45:37.101Z INFO tide::log::middleware] <-- Request received
+[2024-12-24T07:45:37.101Z DEBUG rust_tide_template::server] request counter
+[2024-12-24T07:45:37.101Z INFO rust_tide_template::server] request; method=GET path=/haha
+[2024-12-24T07:45:37.102Z INFO rust_tide_template::server] request; req_id="01JFVT1SAD8X7ENBVHD3BYQCD9"
+[2024-12-24T07:45:37.102Z DEBUG rust_tide_template::server] request counter
+[2024-12-24T07:45:37.102Z INFO rust_tide_template::server] Response; http.code=404 http.duration=53.238µs
+[2024-12-24T07:45:37.102Z WARN tracing::span] client error;
+[2024-12-24T07:45:37.102Z WARN rust_tide_template::server] sent
+[2024-12-24T07:45:37.102Z WARN tide::log::middleware] Client error --> Response sent

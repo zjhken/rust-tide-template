@@ -7,10 +7,10 @@ use serde::Deserialize;
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
 pub struct Cli {
-	#[arg(short, long)]
+	#[arg(short, long, default_value = "local")]
 	pub env: Env,
 
-	#[arg(short, long)]
+	#[arg(short, long, default_value = "8888")]
 	pub port: u16,
 	/// set log level
 	#[arg(short, long, action = clap::ArgAction::Count)]
@@ -24,10 +24,6 @@ pub struct Cli {
 	#[arg(short, long, value_name = "FILE")]
 	#[clap(default_value = "config.toml")]
 	pub config: PathBuf,
-
-	/// Turn debugging information on
-	#[arg(short, long, action = clap::ArgAction::Count)]
-	pub debug: u8,
 
 	#[command(subcommand)]
 	pub command: Option<Commands>,
@@ -47,7 +43,7 @@ pub enum Commands {
 #[serde(rename_all = "lowercase")]
 pub enum Env {
 	#[default]
-	Dev,
+	Local,
 	Uat,
 	Prd,
 }
