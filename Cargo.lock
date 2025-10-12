@@ -2225,6 +2225,7 @@ dependencies = [
  "rusty_ulid",
  "sea-query",
  "serde",
+ "serde_json",
  "sqlx",
  "surf",
  "tide",

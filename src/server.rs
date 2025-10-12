@@ -7,6 +7,7 @@ use tide::{Middleware, Next, Request};
 use tracing::{debug, error, error_span, info, info_span, warn, warn_span, Instrument};
 
 use crate::logging::AccessLogMiddleware;
+use crate::log_api::{handle_set_log_level, handle_get_log_level, handle_delete_log_level, handle_list_log_levels, handle_generate_test_logs};
 
 pub fn init_http_server_blocking() -> Result<()> {
 	let mut app = tide::new();
@@ -20,6 +21,16 @@ pub fn init_http_server_blocking() -> Result<()> {
 	app.at("/")
 		.get(|_| async move { Ok("this is a inline handler") });
 	app.at("/user/:name").get(example_handler);
+
+	// Log level management routes
+	app.at("/api/log-levels")
+		.post(handle_set_log_level)
+		.get(handle_list_log_levels);
+	app.at("/api/log-levels/:target")
+		.get(handle_get_log_level)
+		.delete(handle_delete_log_level);
+	app.at("/api/test-logs")
+		.post(handle_generate_test_logs);
 
 	async_std::task::block_on(async {
 		app.listen("0.0.0.0:8888").await?;

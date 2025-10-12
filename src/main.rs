@@ -4,7 +4,9 @@ mod common;
 mod config;
 mod database;
 mod logging;
+mod log_api;
 mod server;
+mod test_logs;
 
 use anyhow_ext::Result;
 use clap::Parser;

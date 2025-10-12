@@ -19,6 +19,8 @@ use tracing_subscriber::{
 	Registry,
 };
 
+use dashmap::DashMap;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use surf::StatusCode;
@@ -28,11 +30,19 @@ use tracing::{debug, error, error_span, info, info_span, warn, warn_span, Instru
 
 // TODO: use fastrace https://github.com/fast/fastrace/blob/main/fastrace/examples/asynchronous.rs#L13
 
+static TARGET_LEVELS: OnceLock<Arc<DashMap<String, log::LevelFilter>>> = OnceLock::new();
+
 async_std::task_local! {
 	static REQ_ID: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
 }
 
 pub fn setup_logger(log_level: &Level) -> Result<()> {
+	// Initialize target levels storage
+	let target_levels = Arc::new(DashMap::new());
+	TARGET_LEVELS
+		.set(target_levels.clone())
+		.map_err(|_| anyhow_ext::anyhow!("Failed to set target levels"))?;
+
 	fern::Dispatch::new()
 		.format(|out, message, record| {
 			let mut req_id = String::new();
@@ -55,9 +65,10 @@ pub fn setup_logger(log_level: &Level) -> Result<()> {
 				));
 			} else {
 				out.finish(format_args!(
-					"{timestamp}|{level}|{req_id}|{message}",
+					"{timestamp}|{level}|{target}|{req_id}|{message}",
 					timestamp = humantime::format_rfc3339_millis(SystemTime::now()),
 					level = record.level(),
+					target = record.target(),
 				));
 			}
 		})
@@ -68,10 +79,58 @@ pub fn setup_logger(log_level: &Level) -> Result<()> {
 			&tracing::Level::DEBUG => log::LevelFilter::Debug,
 			&tracing::Level::TRACE => log::LevelFilter::Trace,
 		})
-		.filter(|metadata| !metadata.target().starts_with("tide::log::middleware"))
+		.filter(|metadata| {
+			// Filter out tide middleware logs
+			if metadata.target().starts_with("tide::log::middleware") {
+				return false;
+			}
+
+			// Check if we have a specific level for this target
+			if let Some(target_levels) = TARGET_LEVELS.get() {
+				if let Some(level_filter) = target_levels.get(metadata.target()) {
+					return metadata.level() <= *level_filter;
+				}
+			}
+			true
+		})
 		.chain(std::io::stderr())
 		.apply()?;
 	Ok(())
+}
+
+pub fn set_target_log_level(target: String, level: log::LevelFilter) -> Result<()> {
+	if let Some(target_levels) = TARGET_LEVELS.get() {
+		target_levels.insert(target.clone(), level);
+		info!("Set log level for target '{}' to {:?}", target, level);
+		Ok(())
+	} else {
+		Err(anyhow_ext::anyhow!("Target levels not initialized"))
+	}
+}
+
+pub fn get_target_log_level(target: &str) -> Option<log::LevelFilter> {
+	TARGET_LEVELS
+		.get()
+		.and_then(|target_levels| target_levels.get(target).map(|entry| *entry))
+}
+
+pub fn remove_target_log_level(target: &str) -> Result<bool> {
+	if let Some(target_levels) = TARGET_LEVELS.get() {
+		Ok(target_levels.remove(target).is_some())
+	} else {
+		Err(anyhow_ext::anyhow!("Target levels not initialized"))
+	}
+}
+
+pub fn list_target_log_levels() -> Vec<(String, log::LevelFilter)> {
+	if let Some(target_levels) = TARGET_LEVELS.get() {
+		target_levels
+			.iter()
+			.map(|entry| (entry.key().clone(), *entry.value()))
+			.collect()
+	} else {
+		Vec::new()
+	}
 }
 
 #[derive(Debug, Default, Clone)]
