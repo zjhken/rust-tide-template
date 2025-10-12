@@ -18,14 +18,13 @@ use crate::{cli::Cli, config::load_config, database::init_database};
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 
-fn main() -> Result<()> {
-	async_std::task::block_on(async {
-		let cli = Cli::parse();
-		info!(?cli.config);
-		// load_config(cli.config).await?;
-		setup_logger(&CFG.read().await.log_level.0)?;
-		// init_database(CFG.read().await.db_url.as_str())?;
-		init_http_server_blocking()?;
-		Ok(())
-	})
+#[async_std::main]
+async fn main() -> Result<()> {
+	let cli = Cli::parse();
+	info!(?cli.config);
+	// load_config(cli.config).await?;
+	setup_logger(&CFG.read().await.log_level.0)?;
+	// init_database(CFG.read().await.db_url.as_str())?;
+	init_http_server_blocking()?;
+	Ok(())
 }
