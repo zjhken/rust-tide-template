@@ -78,3 +78,25 @@ impl Default for LogLevel {
 pub async fn cfg() -> async_std::sync::RwLockReadGuard<'static, Config> {
 	return CFG.read().await;
 }
+
+/// Safely get a copy of the current config to avoid deadlocks
+pub async fn get_config() -> Config {
+	let config_guard = CFG.read().await;
+	Config {
+		port: config_guard.port,
+		log_level: LogLevel(config_guard.log_level.0.clone()),
+		db_url: config_guard.db_url.clone(),
+	}
+}
+
+/// Safely get just the log level to avoid deadlocks
+pub async fn get_log_level() -> tracing::Level {
+	let config_guard = CFG.read().await;
+	config_guard.log_level.0.clone()
+}
+
+/// Safely get just the database URL to avoid deadlocks
+pub async fn get_db_url() -> String {
+	let config_guard = CFG.read().await;
+	config_guard.db_url.clone()
+}

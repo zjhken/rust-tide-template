@@ -15,7 +15,7 @@ use logging::setup_logger;
 use server::init_http_server_blocking;
 use tracing::info;
 
-use crate::{cli::Cli, config::load_config, database::init_database};
+use crate::{cli::Cli, config::{load_config, get_log_level}, database::init_database};
 
 #[global_allocator]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -24,9 +24,12 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 async fn main() -> Result<()> {
 	let cli = Cli::parse();
 	info!(?cli.config);
+
+	// Use safe helper function to avoid deadlock
+	let log_level = get_log_level().await;
+	setup_logger(&log_level)?;
 	// load_config(cli.config).await?;
-	setup_logger(&CFG.read().await.log_level.0)?;
-	// init_database(CFG.read().await.db_url.as_str())?;
+	// init_database(get_db_url().await.as_str())?;
 	init_http_server_blocking()?;
 	Ok(())
 }
