@@ -1,8 +1,8 @@
 use std::time::Instant;
 
 use anyhow_ext::{Context, Result, anyhow};
-use surf::StatusCode;
-use tide::Response;
+use tide::{Response, StatusCode};
+use tide::http::Method;
 use tide::{Middleware, Next, Request};
 use tracing::{Instrument, debug, error, info, info_span};
 
@@ -122,7 +122,7 @@ struct CorsMiddleware;
 impl<State: Clone + Send + Sync + 'static> Middleware<State> for CorsMiddleware {
 	async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
 		let mut resp = match req.method() {
-			surf::http::Method::Options => make_resp(200, ""),
+			Method::Options => make_resp(200, ""),
 			_ => next.run(req).await,
 		};
 		resp.insert_header("Access-Control-Allow-Origin", "http://localhost:5173");

@@ -22,13 +22,6 @@ sea-query = { version = "0.30.7", default-features = false, features = [
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0"
 tikv-jemallocator = "0.5.4"
-surf = { version = "2.3.2", default-features = false, features = [
-	"h1-client-rustls",
-	"rustls_crate",
-] }
-rusty_ulid = "2.0.0"
-fern = "0.7.1"
-rustls_0181 = { version = "0.18.1", package = "rustls" }
 base64-simd = "0.8.0"
 dashmap = "6.1.0"
 rand = "0.8.5"
