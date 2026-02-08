@@ -8,8 +8,6 @@ use tracing::{Instrument, debug, error, info, info_span};
 
 use crate::{auth, config, logger, utils};
 
-const TOKEN: u32 = 0x60db1e55;
-
 pub async fn init_http_server_blocking() -> Result<()> {
 	// 从配置中读取绑定地址
 	let bind_addr = config::cfg().await.bind.clone();
@@ -42,7 +40,7 @@ pub async fn init_http_server_blocking() -> Result<()> {
 	Ok(())
 }
 
-async fn nested_span_handler(req: Request<()>) -> tide::Result<Response> {
+async fn nested_span_handler(_req: Request<()>) -> tide::Result<Response> {
 	// 测试 nested span
 	let outer_span = info_span!("example_handler", name = "test_user");
 	async move {

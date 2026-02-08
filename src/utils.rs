@@ -3,7 +3,7 @@ use async_std::task_local;
 task_local! {
 	static REQ_ID: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
 }
-
+const TOKEN: u32 = 0x60db1e55;
 const A2Z: &str = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 pub fn gen_n_random_str(n: u8) -> String {
 	(0..n)
