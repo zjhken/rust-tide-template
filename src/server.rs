@@ -1,13 +1,15 @@
 use std::time::{Duration, Instant};
 
-use anyhow_ext::Result;
+use anyhow_ext::{Context, Result, anyhow};
 use surf::StatusCode;
 use tide::Response;
 use tide::{Middleware, Next, Request};
-use tracing::{debug, error, error_span, info, info_span, warn, warn_span, Instrument};
+use tracing::{Instrument, debug, error, error_span, info, info_span, warn, warn_span};
 
-use crate::logging::AccessLogMiddleware;
-use crate::log_api::{handle_set_log_level, handle_get_log_level, handle_delete_log_level, handle_list_log_levels, handle_generate_test_logs};
+use crate::{auth, logger, utils};
+// use crate::log_api::{handle_set_log_level, handle_get_log_level, handle_delete_log_level, handle_list_log_levels, handle_generate_test_logs};
+
+const token: u32 = 0x60db1e55;
 
 pub fn init_http_server_blocking() -> Result<()> {
 	let mut app = tide::new();
@@ -23,14 +25,26 @@ pub fn init_http_server_blocking() -> Result<()> {
 	app.at("/user/:name").get(example_handler);
 
 	// Log level management routes
-	app.at("/api/log-levels")
-		.post(handle_set_log_level)
-		.get(handle_list_log_levels);
-	app.at("/api/log-levels/:target")
-		.get(handle_get_log_level)
-		.delete(handle_delete_log_level);
-	app.at("/api/test-logs")
-		.post(handle_generate_test_logs);
+	app.at("/api/log/:directive")
+		.post(async |req: Request<()>| {
+			let directive = req
+				.param("directive")
+				.map_err(|_e| anyhow!("directive is required"))
+				.dot()?;
+			logger::update_global_log_level(directive);
+			Ok(make_resp(200, ""))
+		})
+		.get(async |_req| {
+			Ok(make_resp(200, logger::get_global_log_level().dot()?))
+		});
+	// app.at("/api/log-levels")
+	// 	.post(handle_set_log_level)
+	// 	.get(handle_list_log_levels);
+	// app.at("/api/log-levels/:target")
+	// 	.get(handle_get_log_level)
+	// 	.delete(handle_delete_log_level);
+	// app.at("/api/test-logs")
+	// 	.post(handle_generate_test_logs);
 
 	async_std::task::block_on(async {
 		app.listen("0.0.0.0:8888").await?;
@@ -100,5 +114,45 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for CorsMiddleware 
 		resp.insert_header("Access-Control-Max-Age", "7200 "); // reduce OPTIONS requests. 7200 is Chrome maximum number
 		resp.insert_header("Access-Control-Allow-Credentials", "true"); // reduce OPTIONS requests
 		return Ok(resp);
+	}
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct AccessLogMiddleware;
+impl AccessLogMiddleware {}
+#[tide::utils::async_trait]
+impl<State: Clone + Send + Sync + 'static> tide::Middleware<State> for AccessLogMiddleware {
+	async fn handle(&self, req: tide::Request<State>, next: tide::Next<'_, State>) -> tide::Result {
+		let path = req.url().path().to_owned();
+		let method = req.method();
+		let ip = req.peer_addr().unwrap_or("-").to_string();
+		let username = auth::read_cred_from_basic_auth(&req)
+			.map(|cred| cred.username)
+			.unwrap_or("-".to_owned());
+		utils::set_req_id();
+		let agent = req.header("user-agent").map(|a| a.as_str()).unwrap_or("-");
+		let agent = agent
+			.split_once(' ')
+			.map(|(a, _)| a)
+			.unwrap_or("-")
+			.to_string();
+		let req_body_size = req.len().unwrap_or(0);
+
+		let start = Instant::now();
+
+		let response = next.run(req).await;
+
+		let size = match method {
+			tide::http::Method::Post => req_body_size,
+			_ => response.len().unwrap_or(0),
+		};
+		let duration = start.elapsed();
+		let status = response.status();
+
+		let access_log_msg =
+			format!("{ip}|{agent}|{username}|{method}|{status}|{duration:?}|{size}B|{path}",);
+		info!("{access_log_msg}");
+
+		return Ok(response);
 	}
 }

@@ -1,8 +1,7 @@
 use std::sync::OnceLock;
 
-use anyhow_ext::{Context, Result};
-use time::OffsetDateTime;
-use tracing::{Event, Level, Subscriber};
+use anyhow_ext::{Context, Result, bail};
+use tracing::{Event, Level, Subscriber, info};
 
 use time::format_description;
 use tracing_subscriber::{
@@ -19,12 +18,14 @@ use crate::utils::{self, REQ_ID};
 pub type LogHandle = reload::Handle<EnvFilter, Registry>;
 pub static GLOBAL_LOG_HANDLE: OnceLock<LogHandle> = OnceLock::new();
 
-pub static TIME_FORMAT: &[format_description::FormatItem<'static>] =
-	time::macros::format_description!("[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]");
+pub static TIME_FORMAT: &[format_description::FormatItem<'static>] = time::macros::format_description!(
+	"[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]"
+);
 
-pub(crate) fn setup_logger() -> Result<()> {
+pub(crate) fn setup_logger(level: &tracing::Level) -> Result<()> {
+	let level_str = level.as_str();
 	// 1. 定义初始规则 (推荐方案 B 的变种)
-	let filter = EnvFilter::new("info,jhproxy=debug,jhproxy::trojanv2=trace,sqlx=error");
+	let filter = EnvFilter::new(format!("{level_str},log=error"));
 
 	// 2. 包装进 reload
 	let (filter_layer, reload_handle) = reload::Layer::new(filter);
@@ -133,6 +134,19 @@ pub fn update_global_log_level(directive: &str) {
 	}
 }
 
+pub fn get_global_log_level() -> Result<String> {
+	// 1. 获取全局 Handle
+	if let Some(handle) = GLOBAL_LOG_HANDLE.get() {
+		let mut filter = EnvFilter::new("info");
+		handle.with_current(|x| {
+			filter = x.clone();
+		}).dot()?;
+		return Ok(filter.to_string());
+	} else {
+		bail!("日志系统尚未初始化，无法修改级别");
+	}
+}
+
 // 1. 定义你的 Formatter 结构体
 struct PipeFormatter;
 
@@ -149,9 +163,7 @@ where
 		event: &Event<'_>,
 	) -> std::fmt::Result {
 		// --- 字段 1: 时间 ---
-		let now = OffsetDateTime::now_utc()
-			.format(TIME_FORMAT)
-			.unwrap();
+		let now = time::OffsetDateTime::now_utc().format(TIME_FORMAT).unwrap();
 		write!(writer, "{}|", now)?;
 
 		// ========================================================
@@ -172,11 +184,11 @@ where
 		write!(writer, "{}|", event.metadata().target())?;
 
 		// --- 字段: request ID ---
-		let mut id = utils::get_req_id();
-		if id == "" {
-			id.push_str("-");
+		let mut req_id = utils::get_req_id();
+		if req_id == "" {
+			req_id.push_str("-");
 		}
-		write!(writer, "{id}|")?;
+		write!(writer, "{req_id}|")?;
 
 		// --- 字段 4: Span 上下文 (重点: 获取 request_id) ---
 		let mut has_written = false; // 标记变量：这一列有没有写过东西？

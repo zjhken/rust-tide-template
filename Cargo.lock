@@ -2226,7 +2226,6 @@ dependencies = [
 name = "rust-tide-template"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "anyhow_ext",
  "async-std",
  "base64-simd",

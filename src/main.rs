@@ -3,9 +3,9 @@ mod cli;
 mod common;
 mod config;
 mod database;
-mod logging;
+// mod logging;
 mod logger;
-mod log_api;
+// mod log_api;
 mod server;
 mod test_logs;
 mod utils;
@@ -13,7 +13,6 @@ mod utils;
 use anyhow_ext::Result;
 use clap::Parser;
 use config::CFG;
-use logging::setup_logger;
 use server::init_http_server_blocking;
 use tracing::info;
 
@@ -29,7 +28,7 @@ async fn main() -> Result<()> {
 
 	// Use safe helper function to avoid deadlock
 	let log_level = get_log_level().await;
-	setup_logger(&log_level)?;
+	logger::setup_logger(&log_level)?;
 	// load_config(cli.config).await?;
 	// init_database(get_db_url().await.as_str())?;
 	init_http_server_blocking()?;
