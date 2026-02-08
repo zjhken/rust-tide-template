@@ -17,7 +17,15 @@ pub fn get_db_pool() -> &'static Pool<Sqlite> {
 	DB_POOL.get().unwrap()
 }
 
-pub fn init_database(db_url: &str) -> Result<()> {
+pub fn init_database(db_url: Option<&str>) -> Result<()> {
+	let db_url = match db_url {
+		Some(url) => url,
+		None => {
+			tracing::info!("No database URL configured, skipping database initialization");
+			return Ok(());
+		}
+	};
+
 	async_std::task::block_on(async {
 		ensure_db_file(db_url).await?;
 		let pool = SqlitePoolOptions::new().connect(db_url).await?;

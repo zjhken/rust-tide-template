@@ -5,6 +5,7 @@ use async_std::sync::RwLock;
 
 use anyhow_ext::Context;
 use anyhow_ext::Result;
+use derive_builder::Builder;
 use serde::Deserialize;
 use std::fmt::Debug;
 use tracing::Level;
@@ -15,23 +16,39 @@ pub static CFG: LazyLock<RwLock<Config>> = LazyLock::new(|| RwLock::new(Config::
 
 pub async fn load_config_from_cli(cli: &Cli) -> Result<()> {
 	let config = Config {
-		port: cli.port,
+		addr: cli.addr.clone().unwrap_or_else(|| format!("0.0.0.0:{}", cli.port)),
 		log_level: match cli.verbose {
 			0 => LogLevel(Level::INFO),
 			1 => LogLevel(Level::DEBUG),
 			2.. => LogLevel(Level::TRACE),
 		},
-		db_url: cli.db_url.to_owned(),
+		db_url: cli.db_url.clone(),
 	};
 	let mut lock = CFG.write().await;
 	*lock = config;
 	Ok(())
 }
 
-pub async fn load_config<P>(config_path: P) -> Result<()>
+pub async fn load_config<P>(config_path: Option<P>) -> Result<()>
 where
 	P: AsRef<Path> + Debug,
 {
+	let config_path = match config_path {
+		Some(path) => path,
+		None => {
+			tracing::info!("No config file specified, using CLI parameters and defaults");
+			return Ok(());
+		}
+	};
+
+	if !config_path.as_ref().exists() {
+		tracing::warn!(
+			"Config file does not exist: {:?}, using CLI parameters and defaults",
+			config_path.as_ref()
+		);
+		return Ok(());
+	}
+
 	let data = std::fs::read_to_string(&config_path).context(format!(
 		"failed to read config file data, path={:?}",
 		config_path.as_ref()
@@ -42,13 +59,22 @@ where
 	Ok(())
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Builder, Debug, Clone)]
+#[builder(setter(into))]
 pub struct Config {
-	pub port: u16,
+	#[serde(default = "default_addr")]
+	pub addr: String,
+	#[serde(default)]
 	pub log_level: LogLevel,
-	pub db_url: String,
+	#[serde(default)]
+	pub db_url: Option<String>,
 }
 
+fn default_addr() -> String {
+	"0.0.0.0:8888".to_string()
+}
+
+#[derive(Debug, Clone)]
 pub struct LogLevel(pub tracing::Level);
 impl<'de> Deserialize<'de> for LogLevel {
 	fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
@@ -83,7 +109,7 @@ pub async fn cfg() -> async_std::sync::RwLockReadGuard<'static, Config> {
 pub async fn get_config() -> Config {
 	let config_guard = CFG.read().await;
 	Config {
-		port: config_guard.port,
+		addr: config_guard.addr.clone(),
 		log_level: LogLevel(config_guard.log_level.0.clone()),
 		db_url: config_guard.db_url.clone(),
 	}
@@ -96,7 +122,7 @@ pub async fn get_log_level() -> tracing::Level {
 }
 
 /// Safely get just the database URL to avoid deadlocks
-pub async fn get_db_url() -> String {
+pub async fn get_db_url() -> Option<String> {
 	let config_guard = CFG.read().await;
 	config_guard.db_url.clone()
 }

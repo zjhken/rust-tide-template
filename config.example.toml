@@ -1,2 +1,8 @@
-port = 8888
+# HTTP 服务器绑定的地址（包含端口）
 addr = "0.0.0.0:8888"
+
+# 日志级别: trace, debug, info, error
+log_level = "debug"
+
+# 数据库 URL（可选）
+# db_url = "sqlite:database.db"

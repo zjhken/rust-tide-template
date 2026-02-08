@@ -6,11 +6,15 @@ use tide::Response;
 use tide::{Middleware, Next, Request};
 use tracing::{Instrument, debug, error, info, info_span};
 
-use crate::{auth, logger, utils};
+use crate::{auth, config, logger, utils};
 
 const TOKEN: u32 = 0x60db1e55;
 
-pub fn init_http_server_blocking() -> Result<()> {
+pub async fn init_http_server_blocking() -> Result<()> {
+	// 从配置中读取绑定地址
+	let cfg = config::get_config().await;
+	let bind_addr = cfg.addr.clone();
+
 	let mut app = tide::new();
 	app.with(ErrorHandleMiddleware {});
 	app.with(CorsMiddleware {});
@@ -37,10 +41,8 @@ pub fn init_http_server_blocking() -> Result<()> {
 			Ok(make_resp(200, logger::get_global_log_level().dot()?))
 		});
 
-	async_std::task::block_on(async {
-		app.listen("0.0.0.0:8888").await?;
-		Ok(())
-	})
+	app.listen(bind_addr).await?;
+	Ok(())
 }
 
 async fn nested_span_handler(req: Request<()>) -> tide::Result<Response> {

@@ -13,7 +13,7 @@ use tracing_subscriber::{
 	util::SubscriberInitExt,
 };
 
-use crate::utils::{self};
+use crate::{config, utils::{self}};
 
 pub type LogHandle = reload::Handle<EnvFilter, Registry>;
 pub static GLOBAL_LOG_HANDLE: OnceLock<LogHandle> = OnceLock::new();
@@ -21,8 +21,8 @@ pub static TIME_FORMAT: &[format_description::FormatItem<'static>] = time::macro
 	"[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]"
 );
 
-pub(crate) fn setup_logger(level: &tracing::Level) -> Result<()> {
-	let level_str = level.as_str();
+pub(crate) async fn setup_logger() -> Result<()> {
+	let level_str = config::get_log_level().await.as_str();
 	// 1. 定义初始规则 (推荐方案 B 的变种)
 	// 过滤掉 tide 内部的 log target，只保留 rust_tide_template 的日志
 	let filter = EnvFilter::new(format!("{level_str},tide=warn"));
