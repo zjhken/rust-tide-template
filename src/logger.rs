@@ -22,7 +22,7 @@ pub static TIME_FORMAT: &[format_description::FormatItem<'static>] = time::macro
 );
 
 pub(crate) async fn setup_logger() -> Result<()> {
-	let directive = config::get_log_directive().await;
+	let directive = config::cfg().await.log_directive.clone();
 	// 1. 定义初始规则
 	let filter = EnvFilter::new(&directive);
 

@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
 	logger::setup_logger().await.dot()?;
 
 	// 初始化数据库（如果配置了 db_url）
-	database::init_database(config::get_db_url().await.as_deref()).dot()?;
+	database::init_database(config::cfg().await.db_url.clone().as_deref()).dot()?;
 
 	init_http_server_blocking().await?;
 	Ok(())
