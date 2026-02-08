@@ -6,7 +6,7 @@ use tracing::{Instrument, debug, error, info, info_span};
 const RELAY_BUFFER_SIZE: usize = 65536; // 64KB for traffic relay
 
 task_local! {
-	pub static REQ_ID: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
+	static REQ_ID: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
 }
 
 const A2Z: &str = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";

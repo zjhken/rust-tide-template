@@ -2232,7 +2232,6 @@ dependencies = [
  "clap",
  "dashmap 6.1.0",
  "fern",
- "log",
  "rand 0.8.5",
  "rustls",
  "rusty_ulid",

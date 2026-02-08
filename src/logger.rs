@@ -13,7 +13,7 @@ use tracing_subscriber::{
 	util::SubscriberInitExt,
 };
 
-use crate::utils::{self, REQ_ID};
+use crate::utils::{self};
 
 pub type LogHandle = reload::Handle<EnvFilter, Registry>;
 pub static GLOBAL_LOG_HANDLE: OnceLock<LogHandle> = OnceLock::new();
@@ -25,7 +25,8 @@ pub static TIME_FORMAT: &[format_description::FormatItem<'static>] = time::macro
 pub(crate) fn setup_logger(level: &tracing::Level) -> Result<()> {
 	let level_str = level.as_str();
 	// 1. 定义初始规则 (推荐方案 B 的变种)
-	let filter = EnvFilter::new(format!("{level_str},log=error"));
+	// 过滤掉 tide 内部的 log target，只保留 rust_tide_template 的日志
+	let filter = EnvFilter::new(format!("{level_str},tide=warn"));
 
 	// 2. 包装进 reload
 	let (filter_layer, reload_handle) = reload::Layer::new(filter);
@@ -118,7 +119,12 @@ pub(crate) fn setup_logger(level: &tracing::Level) -> Result<()> {
 /// - The logger must be initialized via `setup_logger()` before calling this function
 /// - Empty directives are ignored with a warning
 /// - Changes take effect immediately for all subsequent log statements
-pub fn update_global_log_level(directive: &str) {
+pub fn update_global_log_level(directive: &str) -> Result<()> {
+	// for some reason, if set to "trace", the async-std will panic
+	// TODO: change to smol
+	if directive.starts_with("trace") {
+		bail!("if set global log level to trace, async-std will panic");
+	}
 	// 1. 获取全局 Handle
 	if let Some(handle) = GLOBAL_LOG_HANDLE.get() {
 		// 2. 创建新的 Filter
@@ -126,11 +132,14 @@ pub fn update_global_log_level(directive: &str) {
 
 		// 3. 执行 Reload
 		match handle.reload(new_filter) {
-			Ok(_) => tracing::info!("全局日志级别已更新为: {}", directive),
-			Err(e) => tracing::error!("日志级别更新失败: {}", e),
+			Ok(_) => {
+				tracing::info!("全局日志级别已更新为: {}", directive);
+				return Ok(());
+			}
+			Err(e) => bail!("日志级别更新失败: {}", e),
 		}
 	} else {
-		tracing::error!("日志系统尚未初始化，无法修改级别");
+		bail!("日志系统尚未初始化，无法修改级别");
 	}
 }
 
@@ -138,9 +147,11 @@ pub fn get_global_log_level() -> Result<String> {
 	// 1. 获取全局 Handle
 	if let Some(handle) = GLOBAL_LOG_HANDLE.get() {
 		let mut filter = EnvFilter::new("info");
-		handle.with_current(|x| {
-			filter = x.clone();
-		}).dot()?;
+		handle
+			.with_current(|x| {
+				filter = x.clone();
+			})
+			.dot()?;
 		return Ok(filter.to_string());
 	} else {
 		bail!("日志系统尚未初始化，无法修改级别");
@@ -204,7 +215,7 @@ where
 							writer.write_str(",")?;
 						}
 
-						// 直接流式写入 span 内容
+						// 直接流式写入 span 内容, 会出现step="process_data"这种格式
 						writer.write_str(&fields.fields)?;
 						has_written = true;
 					}

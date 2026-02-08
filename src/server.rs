@@ -31,20 +31,12 @@ pub fn init_http_server_blocking() -> Result<()> {
 				.param("directive")
 				.map_err(|_e| anyhow!("directive is required"))
 				.dot()?;
-			logger::update_global_log_level(directive);
+			logger::update_global_log_level(directive).dot()?;
 			Ok(make_resp(200, ""))
 		})
 		.get(async |_req| {
 			Ok(make_resp(200, logger::get_global_log_level().dot()?))
 		});
-	// app.at("/api/log-levels")
-	// 	.post(handle_set_log_level)
-	// 	.get(handle_list_log_levels);
-	// app.at("/api/log-levels/:target")
-	// 	.get(handle_get_log_level)
-	// 	.delete(handle_delete_log_level);
-	// app.at("/api/test-logs")
-	// 	.post(handle_generate_test_logs);
 
 	async_std::task::block_on(async {
 		app.listen("0.0.0.0:8888").await?;
@@ -53,8 +45,43 @@ pub fn init_http_server_blocking() -> Result<()> {
 }
 
 async fn example_handler(req: Request<()>) -> tide::Result<Response> {
-	// cannot use any number as status code
-	Ok(make_resp(StatusCode::Ok, ""))
+	// 测试 nested span
+	let outer_span = info_span!("example_handler", name = "test_user");
+	async move {
+		info!("进入 example_handler");
+
+		// 第一个嵌套 span
+		let span1 = info_span!("validation", step = "validate_input");
+		async {
+			info!("验证用户输入");
+			debug!("输入参数检查完成");
+		}
+		.instrument(span1)
+		.await;
+
+		// 第二个嵌套 span
+		let span2 = info_span!("business_logic", step = "process_data");
+		async {
+			info!("执行业务逻辑");
+			debug!("数据处理中...");
+
+			// 第三层嵌套
+			let span3 = info_span!("database", operation = "query");
+			async {
+				info!("查询数据库");
+				debug!("SQL 执行完成");
+			}
+			.instrument(span3)
+			.await;
+		}
+		.instrument(span2)
+		.await;
+
+		info!("example_handler 完成");
+		Ok(make_resp(StatusCode::Ok, "nested span test"))
+	}
+	.instrument(outer_span)
+	.await
 }
 
 struct AuthMiddleware;

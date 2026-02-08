@@ -7,7 +7,6 @@ mod database;
 mod logger;
 // mod log_api;
 mod server;
-mod test_logs;
 mod utils;
 
 use anyhow_ext::Result;

@@ -28,7 +28,6 @@ surf = { version = "2.3.2", default-features = false, features = [
 ] }
 rusty_ulid = "2.0.0"
 fern = "0.7.1"
-log = "0.4.22"
 rustls_0181 = { version = "0.18.1", package = "rustls" }
 base64-simd = "0.8.0"
 dashmap = "6.1.0"
