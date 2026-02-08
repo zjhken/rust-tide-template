@@ -1,8 +1,9 @@
 use core::fmt;
-use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::Deserialize;
+
+use crate::config::Config;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -10,21 +11,8 @@ pub struct Cli {
 	#[arg(short, long, default_value = "local")]
 	pub env: Env,
 
-	/// Server address (e.g., "0.0.0.0:8888")
-	#[arg(short, long, default_value = "0.0.0.0:8888")]
-	pub bind: String,
-
-	/// set log level
-	#[arg(short, long, action = clap::ArgAction::Count)]
-	pub verbose: u8,
-
-	/// Database URL (optional)
-	#[arg(short, long)]
-	pub db_url: Option<String>,
-
-	/// Sets a custom config file (optional)
-	#[arg(short, long, value_name = "FILE")]
-	pub config: Option<PathBuf>,
+	#[command(flatten)]
+	pub config: Config,
 
 	#[command(subcommand)]
 	pub command: Option<Commands>,

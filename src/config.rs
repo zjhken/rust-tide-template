@@ -2,6 +2,7 @@ use std::path::Path;
 use std::sync::LazyLock;
 
 use async_std::sync::RwLock;
+use clap::Parser;
 
 use anyhow_ext::Context;
 use anyhow_ext::Result;
@@ -9,30 +10,15 @@ use derive_builder::Builder;
 use serde::Deserialize;
 use std::fmt::Debug;
 
-use crate::cli::Cli;
-
 pub static CONFIG: LazyLock<RwLock<Config>> = LazyLock::new(|| RwLock::new(Config::default()));
 
-pub async fn load_config_from_cli(cli: &Cli) -> Result<()> {
-	let directive = match cli.verbose {
-		0 => "info,tide=warn",
-		1 => "debug,tide=warn",
-		2.. => "debug,tide=warn", // trace causes async-std panic, use debug instead
-	};
-	let config = Config {
-		bind: cli.bind.clone(),
-		log_directive: directive.to_string(),
-		db_url: cli.db_url.clone(),
-	};
+pub async fn load_config_from_cli(cli: Config) -> Result<()> {
 	let mut lock = CONFIG.write().await;
-	*lock = config;
+	*lock = cli;
 	Ok(())
 }
 
-pub async fn load_config<P>(config_path: Option<P>) -> Result<()>
-where
-	P: AsRef<Path> + Debug,
-{
+pub async fn load_config_from_path(config_path: Option<&str>) -> Result<()> {
 	let config_path = match config_path {
 		Some(path) => path,
 		None => {
@@ -41,33 +27,57 @@ where
 		}
 	};
 
-	if !config_path.as_ref().exists() {
+	if !Path::new(config_path).exists() {
 		tracing::warn!(
 			"Config file does not exist: {:?}, using CLI parameters and defaults",
-			config_path.as_ref()
+			config_path
 		);
 		return Ok(());
 	}
 
-	let data = std::fs::read_to_string(&config_path).context(format!(
+	let data = std::fs::read_to_string(config_path).context(format!(
 		"failed to read config file data, path={:?}",
-		config_path.as_ref()
+		config_path
 	))?;
-	let config: Config = toml::from_str(data.as_str()).context(format!("{:?}", config_path))?;
+	let file_config: Config = toml::from_str(&data).context(format!("{:?}", config_path))?;
+
 	let mut lock = CONFIG.write().await;
-	*lock = config;
+	// Merge: file config overrides CLI config (only for non-None values)
+	if file_config.bind != default_addr() {
+		lock.bind = file_config.bind;
+	}
+	if file_config.log_directive != default_log_directive() {
+		lock.log_directive = file_config.log_directive;
+	}
+	if file_config.db_url.is_some() {
+		lock.db_url = file_config.db_url;
+	}
 	Ok(())
 }
 
-#[derive(Deserialize, Default, Builder, Debug, Clone)]
+#[derive(Deserialize, Default, Builder, Debug, Clone, Parser)]
 #[builder(setter(into))]
+#[command(version, about, long_about = None)]
 pub struct Config {
+	/// Server address (e.g., "0.0.0.0:8888")
+	#[arg(short, long, default_value = "0.0.0.0:8888")]
 	#[serde(default = "default_addr")]
 	pub bind: String,
+
+	/// Log directive (e.g., "info,tide=warn", "debug", "sqlx=error")
+	#[arg(short, long, default_value = "info,tide=warn")]
 	#[serde(default = "default_log_directive")]
 	pub log_directive: String,
+
+	/// Database URL (optional)
+	#[arg(short, long)]
 	#[serde(default)]
 	pub db_url: Option<String>,
+
+	/// Sets a custom config file (optional)
+	#[arg(short, long, value_name = "FILE")]
+	#[serde(default)]
+	pub config_file: Option<String>,
 }
 
 fn default_addr() -> String {
