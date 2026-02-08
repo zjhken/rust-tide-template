@@ -1,10 +1,8 @@
 use std::sync::OnceLock;
 
-use anyhow_ext::Context;
 use anyhow_ext::{anyhow, Ok, Result};
-use async_std::sync::Mutex;
 use sea_query::{
-	ColumnDef, Expr, ForeignKey, Iden, QueryStatementWriter, SqliteQueryBuilder, Table, Value,
+	ColumnDef, Expr, Iden, QueryStatementWriter, SqliteQueryBuilder, Table, Value,
 };
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 use tracing::info;

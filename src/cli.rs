@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{default, fmt::write, path::PathBuf};
+use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::Deserialize;

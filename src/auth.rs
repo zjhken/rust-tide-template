@@ -7,7 +7,7 @@ use dashmap::DashMap;
 use serde::Deserialize;
 use tracing::info;
 
-use crate::common::make_resp;
+use crate::server::make_resp;
 
 static CRED_CACHE: LazyLock<DashMap<String, (String, Instant)>> = LazyLock::new(|| DashMap::new());
 
@@ -22,7 +22,7 @@ pub struct AuthMiddleware;
 impl<State: Clone + Send + Sync + 'static> tide::Middleware<State> for AuthMiddleware {
 	async fn handle(
 		&self,
-		mut req: tide::Request<State>,
+		req: tide::Request<State>,
 		next: tide::Next<'_, State>,
 	) -> tide::Result {
 		info!("enter auth");

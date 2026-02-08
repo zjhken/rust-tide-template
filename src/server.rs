@@ -1,15 +1,14 @@
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use anyhow_ext::{Context, Result, anyhow};
 use surf::StatusCode;
 use tide::Response;
 use tide::{Middleware, Next, Request};
-use tracing::{Instrument, debug, error, error_span, info, info_span, warn, warn_span};
+use tracing::{Instrument, debug, error, info, info_span};
 
 use crate::{auth, logger, utils};
-// use crate::log_api::{handle_set_log_level, handle_get_log_level, handle_delete_log_level, handle_list_log_levels, handle_generate_test_logs};
 
-const token: u32 = 0x60db1e55;
+const TOKEN: u32 = 0x60db1e55;
 
 pub fn init_http_server_blocking() -> Result<()> {
 	let mut app = tide::new();
@@ -22,7 +21,7 @@ pub fn init_http_server_blocking() -> Result<()> {
 
 	app.at("/")
 		.get(|_| async move { Ok("this is a inline handler") });
-	app.at("/user/:name").get(example_handler);
+	app.at("/user/:name").get(nested_span_handler);
 
 	// Log level management routes
 	app.at("/api/log/:directive")
@@ -44,7 +43,7 @@ pub fn init_http_server_blocking() -> Result<()> {
 	})
 }
 
-async fn example_handler(req: Request<()>) -> tide::Result<Response> {
+async fn nested_span_handler(req: Request<()>) -> tide::Result<Response> {
 	// 测试 nested span
 	let outer_span = info_span!("example_handler", name = "test_user");
 	async move {
@@ -87,11 +86,11 @@ async fn example_handler(req: Request<()>) -> tide::Result<Response> {
 struct AuthMiddleware;
 #[tide::utils::async_trait]
 impl<State: Clone + Send + Sync + 'static> Middleware<State> for AuthMiddleware {
-	async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
+	async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
 		debug!("request counter");
 		// req.set_ext(RequestCount(count));
 
-		let mut res = next.run(req).await;
+		let res = next.run(req).await;
 
 		// res.insert_header("request-number", count.to_string());
 		Ok(res)
@@ -111,7 +110,7 @@ where
 struct ErrorHandleMiddleware;
 #[tide::utils::async_trait]
 impl<State: Clone + Send + Sync + 'static> Middleware<State> for ErrorHandleMiddleware {
-	async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
+	async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
 		let mut resp = next.run(req).await;
 		if let Some(err) = resp.error() {
 			error!(?err);
@@ -124,7 +123,7 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for ErrorHandleMidd
 struct CorsMiddleware;
 #[tide::utils::async_trait]
 impl<State: Clone + Send + Sync + 'static> Middleware<State> for CorsMiddleware {
-	async fn handle(&self, mut req: Request<State>, next: Next<'_, State>) -> tide::Result {
+	async fn handle(&self, req: Request<State>, next: Next<'_, State>) -> tide::Result {
 		let mut resp = match req.method() {
 			surf::http::Method::Options => make_resp(200, ""),
 			_ => next.run(req).await,

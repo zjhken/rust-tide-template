@@ -1,9 +1,4 @@
-use anyhow_ext::{Context, Result};
-use async_std::{io::WriteExt, task_local};
-use tracing::{Instrument, debug, error, info, info_span};
-
-
-const RELAY_BUFFER_SIZE: usize = 65536; // 64KB for traffic relay
+use async_std::task_local;
 
 task_local! {
 	static REQ_ID: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
@@ -34,6 +29,46 @@ pub(crate) fn get_req_id() -> String {
 	});
 	return id;
 }
+
+macro_rules! retry_http {
+	($f:expr, $maxTries:expr, $interval:expr, $retry_http_codes:expr) => {{
+		let mut tries = 0;
+		let result = loop {
+			let result = $f;
+			tries += 1;
+			match result {
+				Ok(ref resp) => {
+					let status = resp.status();
+					if ($retry_http_codes.contains(&(status as u16))) {
+						tracing::warn!(
+							"({}/{}) retry: bad status code. {}",
+							tries,
+							$maxTries,
+							status
+						);
+						if tries >= $maxTries {
+							tracing::error!("exceed maxTries");
+							break result;
+						}
+						async_std::task::sleep(std::time::Duration::from_millis($interval)).await
+					} else {
+						break result;
+					}
+				}
+				Err(ref e) => {
+					tracing::warn!("({}/{}) retry: error. {}", tries, $maxTries, e);
+					if tries >= $maxTries {
+						tracing::error!("exceed maxTries");
+						break result;
+					}
+					async_std::task::sleep(std::time::Duration::from_millis($interval)).await
+				}
+			}
+		};
+		result
+	}};
+}
+
 
 
 #[cfg(test)]

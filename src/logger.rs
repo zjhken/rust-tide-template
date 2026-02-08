@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use anyhow_ext::{Context, Result, bail};
-use tracing::{Event, Level, Subscriber, info};
+use tracing::{Event, Level, Subscriber};
 
 use time::format_description;
 use tracing_subscriber::{
@@ -17,7 +17,6 @@ use crate::utils::{self};
 
 pub type LogHandle = reload::Handle<EnvFilter, Registry>;
 pub static GLOBAL_LOG_HANDLE: OnceLock<LogHandle> = OnceLock::new();
-
 pub static TIME_FORMAT: &[format_description::FormatItem<'static>] = time::macros::format_description!(
 	"[year]-[month]-[day]T[hour]:[minute]:[second].[subsecond digits:3]"
 );
