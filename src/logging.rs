@@ -5,18 +5,18 @@ use async_std::sync::Mutex;
 
 use anyhow_ext::Context;
 use anyhow_ext::Result;
-use tracing::{level_filters::LevelFilter, Level};
+use tracing::{Level, level_filters::LevelFilter};
 use tracing_subscriber::fmt::format;
 
 use crate::auth;
 use crate::common::gen_n_random_str;
 use crate::config::LogLevel;
+use crate::logger::TIME_FORMAT;
 use tracing_subscriber::{
-	filter,
+	Registry, filter,
 	fmt::{self, layer},
 	prelude::*,
 	reload::{self, Handle},
-	Registry,
 };
 
 use dashmap::DashMap;
@@ -26,7 +26,7 @@ use std::time::{Duration, Instant};
 use surf::StatusCode;
 use tide::Response;
 use tide::{Middleware, Next, Request};
-use tracing::{debug, error, error_span, info, info_span, warn, warn_span, Instrument};
+use tracing::{Instrument, debug, error, error_span, info, info_span, warn, warn_span};
 
 // TODO: use fastrace https://github.com/fast/fastrace/blob/main/fastrace/examples/asynchronous.rs#L13
 
@@ -50,14 +50,14 @@ pub fn setup_logger(log_level: &Level) -> Result<()> {
 			if req_id.is_empty() {
 				out.finish(format_args!(
 					"{timestamp}|{level}|{target}|{message}",
-					timestamp = humantime::format_rfc3339_millis(SystemTime::now()),
+					timestamp = time::OffsetDateTime::now_utc().format(TIME_FORMAT).unwrap(),
 					level = record.level(),
 					target = record.target(),
 				));
 			} else if record.level() == log::Level::Error {
 				out.finish(format_args!(
 					"{timestamp}|{level}|{target}|{req_id}|{file}@{line}|{message}",
-					timestamp = humantime::format_rfc3339_millis(SystemTime::now()),
+					timestamp = time::OffsetDateTime::now_utc().format(TIME_FORMAT).unwrap(),
 					level = record.level(),
 					target = record.target(),
 					file = record.file().unwrap_or("unknown_file"),
@@ -66,7 +66,7 @@ pub fn setup_logger(log_level: &Level) -> Result<()> {
 			} else {
 				out.finish(format_args!(
 					"{timestamp}|{level}|{target}|{req_id}|{message}",
-					timestamp = humantime::format_rfc3339_millis(SystemTime::now()),
+					timestamp = time::OffsetDateTime::now_utc().format(TIME_FORMAT).unwrap(),
 					level = record.level(),
 					target = record.target(),
 				));
