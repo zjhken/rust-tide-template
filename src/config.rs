@@ -8,20 +8,20 @@ use anyhow_ext::Result;
 use derive_builder::Builder;
 use serde::Deserialize;
 use std::fmt::Debug;
-use tracing::Level;
 
 use crate::cli::Cli;
 
 pub static CFG: LazyLock<RwLock<Config>> = LazyLock::new(|| RwLock::new(Config::default()));
 
 pub async fn load_config_from_cli(cli: &Cli) -> Result<()> {
+	let directive = match cli.verbose {
+		0 => "info,tide=warn",
+		1 => "debug,tide=warn",
+		2.. => "debug,tide=warn", // trace causes async-std panic, use debug instead
+	};
 	let config = Config {
 		addr: cli.addr.clone().unwrap_or_else(|| format!("0.0.0.0:{}", cli.port)),
-		log_level: match cli.verbose {
-			0 => LogLevel(Level::INFO),
-			1 => LogLevel(Level::DEBUG),
-			2.. => LogLevel(Level::TRACE),
-		},
+		log_directive: directive.to_string(),
 		db_url: cli.db_url.clone(),
 	};
 	let mut lock = CFG.write().await;
@@ -64,8 +64,8 @@ where
 pub struct Config {
 	#[serde(default = "default_addr")]
 	pub addr: String,
-	#[serde(default)]
-	pub log_level: LogLevel,
+	#[serde(default = "default_log_directive")]
+	pub log_directive: String,
 	#[serde(default)]
 	pub db_url: Option<String>,
 }
@@ -74,31 +74,8 @@ fn default_addr() -> String {
 	"0.0.0.0:8888".to_string()
 }
 
-#[derive(Debug, Clone)]
-pub struct LogLevel(pub tracing::Level);
-impl<'de> Deserialize<'de> for LogLevel {
-	fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
-	where
-		D: serde::Deserializer<'de>,
-	{
-		let s = String::deserialize(deserializer)?.to_lowercase();
-		match s.as_str() {
-			"trace" => return Ok(LogLevel(Level::TRACE)),
-			"debug" => return Ok(LogLevel(Level::DEBUG)),
-			"info" => return Ok(LogLevel(Level::INFO)),
-			"error" => return Ok(LogLevel(Level::ERROR)),
-			other => {
-				return Err(serde::de::Error::custom(format!(
-					"cannot convert {other} to log level"
-				)))
-			}
-		}
-	}
-}
-impl Default for LogLevel {
-	fn default() -> Self {
-		LogLevel(Level::DEBUG)
-	}
+fn default_log_directive() -> String {
+	"info,tide=warn".to_string()
 }
 
 pub async fn cfg() -> async_std::sync::RwLockReadGuard<'static, Config> {
@@ -110,15 +87,15 @@ pub async fn get_config() -> Config {
 	let config_guard = CFG.read().await;
 	Config {
 		addr: config_guard.addr.clone(),
-		log_level: LogLevel(config_guard.log_level.0.clone()),
+		log_directive: config_guard.log_directive.clone(),
 		db_url: config_guard.db_url.clone(),
 	}
 }
 
-/// Safely get just the log level to avoid deadlocks
-pub async fn get_log_level() -> tracing::Level {
+/// Safely get just the log directive to avoid deadlocks
+pub async fn get_log_directive() -> String {
 	let config_guard = CFG.read().await;
-	config_guard.log_level.0.clone()
+	config_guard.log_directive.clone()
 }
 
 /// Safely get just the database URL to avoid deadlocks

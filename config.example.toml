@@ -1,8 +1,10 @@
 # HTTP 服务器绑定的地址（包含端口）
 addr = "0.0.0.0:8888"
 
-# 日志级别: trace, debug, info, error
-log_level = "debug"
+# 日志指令（tracing filter format）
+# 格式: "level,module1=level1,module2=level2,...]"
+# 示例: "info,tide=warn" 表示 info 级别，但 tide 模块只显示 warn 及以上
+log_directive = "info,tide=warn"
 
 # 数据库 URL（可选）
 # db_url = "sqlite:database.db"

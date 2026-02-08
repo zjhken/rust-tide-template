@@ -22,10 +22,9 @@ pub static TIME_FORMAT: &[format_description::FormatItem<'static>] = time::macro
 );
 
 pub(crate) async fn setup_logger() -> Result<()> {
-	let level_str = config::get_log_level().await.as_str();
-	// 1. 定义初始规则 (推荐方案 B 的变种)
-	// 过滤掉 tide 内部的 log target，只保留 rust_tide_template 的日志
-	let filter = EnvFilter::new(format!("{level_str},tide=warn"));
+	let directive = config::get_log_directive().await;
+	// 1. 定义初始规则
+	let filter = EnvFilter::new(&directive);
 
 	// 2. 包装进 reload
 	let (filter_layer, reload_handle) = reload::Layer::new(filter);
