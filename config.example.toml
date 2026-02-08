@@ -1,5 +1,5 @@
 # HTTP 服务器绑定的地址（包含端口）
-addr = "0.0.0.0:8888"
+bind = "0.0.0.0:8888"
 
 # 日志指令（tracing filter format）
 # 格式: "level,module1=level1,module2=level2,...]"

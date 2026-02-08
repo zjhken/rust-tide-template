@@ -13,7 +13,7 @@ const TOKEN: u32 = 0x60db1e55;
 pub async fn init_http_server_blocking() -> Result<()> {
 	// 从配置中读取绑定地址
 	let cfg = config::get_config().await;
-	let bind_addr = cfg.addr.clone();
+	let bind_addr = cfg.bind.clone();
 
 	let mut app = tide::new();
 	app.with(ErrorHandleMiddleware {});

@@ -10,13 +10,9 @@ pub struct Cli {
 	#[arg(short, long, default_value = "local")]
 	pub env: Env,
 
-	/// Server address (e.g., "0.0.0.0:8888"). If not specified, uses --port
-	#[arg(short, long)]
-	pub addr: Option<String>,
-
-	/// Server port (only used if --addr is not specified)
-	#[arg(short = 'P', long, default_value = "8888")]
-	pub port: u16,
+	/// Server address (e.g., "0.0.0.0:8888")
+	#[arg(short, long, default_value = "0.0.0.0:8888")]
+	pub bind: String,
 
 	/// set log level
 	#[arg(short, long, action = clap::ArgAction::Count)]

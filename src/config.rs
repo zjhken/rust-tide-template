@@ -20,7 +20,7 @@ pub async fn load_config_from_cli(cli: &Cli) -> Result<()> {
 		2.. => "debug,tide=warn", // trace causes async-std panic, use debug instead
 	};
 	let config = Config {
-		addr: cli.addr.clone().unwrap_or_else(|| format!("0.0.0.0:{}", cli.port)),
+		bind: cli.bind.clone(),
 		log_directive: directive.to_string(),
 		db_url: cli.db_url.clone(),
 	};
@@ -63,7 +63,7 @@ where
 #[builder(setter(into))]
 pub struct Config {
 	#[serde(default = "default_addr")]
-	pub addr: String,
+	pub bind: String,
 	#[serde(default = "default_log_directive")]
 	pub log_directive: String,
 	#[serde(default)]
@@ -86,7 +86,7 @@ pub async fn cfg() -> async_std::sync::RwLockReadGuard<'static, Config> {
 pub async fn get_config() -> Config {
 	let config_guard = CFG.read().await;
 	Config {
-		addr: config_guard.addr.clone(),
+		bind: config_guard.bind.clone(),
 		log_directive: config_guard.log_directive.clone(),
 		db_url: config_guard.db_url.clone(),
 	}
