@@ -15,7 +15,7 @@ pub fn gen_n_random_str(n: u8) -> String {
 }
 
 pub(crate) fn set_req_id() {
-	REQ_ID.with(|s| {
+	let _ = REQ_ID.try_with(|s| {
 		let mut ss = s.borrow_mut();
 		ss.clear();
 		ss.push_str(&gen_n_random_str(7));
@@ -24,7 +24,7 @@ pub(crate) fn set_req_id() {
 
 pub(crate) fn get_req_id() -> String {
 	let mut id = String::new();
-	REQ_ID.with(|s| {
+	let _ = REQ_ID.try_with(|s| {
 		id.push_str(s.borrow().as_str());
 	});
 	return id;
