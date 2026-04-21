@@ -40,7 +40,7 @@ pub fn init_database(db_url: Option<&str>) -> Result<()> {
 		DB_CONN.set(db).expect("Failed to set global DB connection");
 
 		Ok(())
-	})
+	});
 }
 
 /// Get the global database connection

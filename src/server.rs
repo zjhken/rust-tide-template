@@ -1,9 +1,9 @@
 use std::time::Instant;
 
 use anyhow_ext::{Context, Result, anyhow};
-use tide::{Response, StatusCode};
 use tide::http::Method;
 use tide::{Middleware, Next, Request};
+use tide::{Response, StatusCode};
 use tracing::{Instrument, debug, error, info, info_span};
 
 use crate::{auth, config, logger, utils};
@@ -32,9 +32,7 @@ pub async fn init_http_server_blocking() -> Result<()> {
 			logger::update_global_log_level(directive).dot()?;
 			Ok(make_resp(200, ""))
 		})
-		.get(async |_req| {
-			Ok(make_resp(200, logger::get_global_log_level().dot()?))
-		});
+		.get(async |_req| Ok(make_resp(200, logger::get_global_log_level().dot()?)));
 
 	app.listen(bind_addr).await?;
 	Ok(())

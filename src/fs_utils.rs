@@ -1,6 +1,3 @@
-
-
-
 pub async fn create_path_and_file_overwrite(path: &PathBuf) -> Result<fs::File> {
 	fs::create_dir_all(
 		path.parent()
@@ -17,13 +14,12 @@ pub async fn create_path_and_file_overwrite(path: &PathBuf) -> Result<fs::File> 
 		.context(format!("failed to create file => {path:?}"))?;
 	return Ok(file);
 }
-use anyhow_ext::anyhow;
 use anyhow_ext::Context;
 use anyhow_ext::Result;
+use anyhow_ext::anyhow;
 use async_std::fs::OpenOptions;
 use async_std::{fs, path::PathBuf};
 use tracing::info;
-
 
 pub(crate) async fn ensure_path(path: &std::path::PathBuf) -> Result<()> {
 	info!(?path, "checking path");

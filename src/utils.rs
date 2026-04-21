@@ -69,8 +69,6 @@ macro_rules! retry_http {
 	}};
 }
 
-
-
 #[cfg(test)]
 mod tests {
 	use super::*;

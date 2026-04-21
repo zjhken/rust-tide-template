@@ -13,7 +13,10 @@ use tracing_subscriber::{
 	util::SubscriberInitExt,
 };
 
-use crate::{config, utils::{self}};
+use crate::{
+	config,
+	utils::{self},
+};
 
 pub type LogHandle = reload::Handle<EnvFilter, Registry>;
 pub static GLOBAL_LOG_HANDLE: OnceLock<LogHandle> = OnceLock::new();

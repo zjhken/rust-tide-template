@@ -3,7 +3,7 @@ use core::fmt;
 use clap::{Parser, Subcommand, ValueEnum};
 use serde::Deserialize;
 
-use crate::config::Config;
+use crate::config::RawConfig;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -12,7 +12,11 @@ pub struct Cli {
 	pub env: Env,
 
 	#[command(flatten)]
-	pub config: Config,
+	pub config: RawConfig,
+
+	/// Sets a custom config file (optional)
+	#[arg(short, long, value_name = "FILE")]
+	pub config_file: Option<String>,
 
 	#[command(subcommand)]
 	pub command: Option<Commands>,

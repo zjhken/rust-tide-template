@@ -20,15 +20,12 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 async fn main() -> Result<()> {
 	let cli = Cli::parse();
 
-	// CLI 参数优先级最高
-	config::load_config_from_cli(cli.config).await.dot()?;
-
-	// 如果指定了配置文件，则加载（会覆盖 CLI 参数中未指定的部分）
-	config::load_config_from_path(config::cfg().await.config_file.as_deref()).await.dot()?;
+	config::load_config(cli.config, cli.config_file.as_deref())
+		.await
+		.dot()?;
 
 	logger::setup_logger().await.dot()?;
 
-	// 初始化数据库（如果配置了 db_url）
 	database::init_database(config::cfg().await.db_url.clone().as_deref()).dot()?;
 
 	init_http_server_blocking().await?;

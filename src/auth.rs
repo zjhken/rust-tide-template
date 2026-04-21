@@ -20,11 +20,7 @@ pub struct Cred {
 pub struct AuthMiddleware;
 #[tide::utils::async_trait]
 impl<State: Clone + Send + Sync + 'static> tide::Middleware<State> for AuthMiddleware {
-	async fn handle(
-		&self,
-		req: tide::Request<State>,
-		next: tide::Next<'_, State>,
-	) -> tide::Result {
+	async fn handle(&self, req: tide::Request<State>, next: tide::Next<'_, State>) -> tide::Result {
 		info!("enter auth");
 		let cred = read_cred_from_basic_auth(&req);
 		match cred {
