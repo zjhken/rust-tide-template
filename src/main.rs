@@ -3,7 +3,6 @@ mod cli;
 mod config;
 mod database;
 mod entity;
-mod fs_utils;
 mod logger;
 mod server;
 mod utils;
