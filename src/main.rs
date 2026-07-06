@@ -14,7 +14,7 @@ use cli::Cli;
 use server::init_http_server_blocking;
 
 #[global_allocator]
-static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[async_std::main]
 async fn main() -> Result<()> {

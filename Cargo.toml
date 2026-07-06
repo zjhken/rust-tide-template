@@ -15,12 +15,12 @@ sea-orm = { version = "1.1.0", features = ["sqlx-sqlite", "runtime-async-std", "
 sea-orm-migration = { version = "1.1.0", features = ["runtime-async-std", "sqlx-sqlite"] }
 serde = { version = "1.0.197", features = ["derive"] }
 serde_json = "1.0"
-tikv-jemallocator = "0.5.4"
 base64-simd = "0.8.0"
 dashmap = "6.1.0"
 rand = "0.8.5"
 time = { version = "0.3.47", features = ["formatting", "macros"] }
 migration = { path = "migration" }
+mimalloc = "0.1.52"
 
 [profile.release]
 lto = "fat"
