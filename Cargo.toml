@@ -7,7 +7,7 @@ edition = "2024"
 clap = { version = "4.5.4", features = ["derive", "cargo", "wrap_help"] }
 anyhow_ext = "0.2.1"
 async-std = { version = "1.12.0", features = ["attributes"] }
-tide = "0.16.0"
+tide = { version = "0.16.0", features = ["cookies", "h1-server", "sessions"], default-features = false }
 toml = "0.8.12"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
