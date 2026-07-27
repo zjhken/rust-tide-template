@@ -72,10 +72,7 @@ pub fn merge(cli: RawConfig, file: RawConfig) -> Config {
 
 pub fn load_config_file(path: &str) -> Result<RawConfig> {
 	if !Path::new(path).exists() {
-		tracing::warn!(
-			"Config file does not exist: {:?}, using CLI parameters and defaults",
-			path
-		);
+		tracing::warn!("Config file does not exist: {:?}, using CLI parameters and defaults", path);
 		return Ok(RawConfig::default());
 	}
 

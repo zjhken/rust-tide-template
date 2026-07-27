@@ -169,10 +169,7 @@ where
 	N: for<'a> FormatFields<'a> + 'static,
 {
 	fn format_event(
-		&self,
-		ctx: &FmtContext<'_, S, N>,
-		mut writer: Writer<'_>,
-		event: &Event<'_>,
+		&self, ctx: &FmtContext<'_, S, N>, mut writer: Writer<'_>, event: &Event<'_>,
 	) -> std::fmt::Result {
 		// --- 字段 1: 时间 ---
 		let now = time::OffsetDateTime::now_utc().format(TIME_FORMAT).unwrap();

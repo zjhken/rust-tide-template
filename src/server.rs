@@ -128,10 +128,7 @@ impl<State: Clone + Send + Sync + 'static> Middleware<State> for CorsMiddleware 
 			"Access-Control-Allow-Headers",
 			"Origin, X-Requested-With, Content-Type, Accept",
 		);
-		resp.insert_header(
-			"Access-Control-Allow-Methods",
-			"GET, POST, PUT, DELETE, OPTIONS",
-		);
+		resp.insert_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 		resp.insert_header("Access-Control-Max-Age", "7200 "); // reduce OPTIONS requests. 7200 is Chrome maximum number
 		resp.insert_header("Access-Control-Allow-Credentials", "true"); // reduce OPTIONS requests
 		return Ok(resp);
