@@ -1,6 +1,6 @@
 use core::fmt;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, ValueEnum};
 use serde::Deserialize;
 
 use crate::config::RawConfig;
@@ -17,19 +17,6 @@ pub struct Cli {
 	/// Sets a custom config file (optional)
 	#[arg(short, long, value_name = "FILE")]
 	pub config_file: Option<String>,
-
-	#[command(subcommand)]
-	pub command: Option<Commands>,
-}
-
-#[derive(Subcommand)]
-pub enum Commands {
-	/// does testing things
-	Test {
-		/// lists test values
-		#[arg(short, long)]
-		list: bool,
-	},
 }
 
 #[derive(Deserialize, ValueEnum, Clone, Debug, Default)]

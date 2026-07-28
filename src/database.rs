@@ -21,7 +21,7 @@ pub fn init_database(db_url: Option<&str>) -> Result<()> {
 		}
 	};
 
-	return async_std::task::block_on(async {
+	async_std::task::block_on(async {
 		// Create database file if not exists
 		ensure_db_file(db_url).await?;
 
@@ -40,7 +40,7 @@ pub fn init_database(db_url: Option<&str>) -> Result<()> {
 		DB_CONN.set(db).expect("Failed to set global DB connection");
 
 		Ok(())
-	});
+	})
 }
 
 /// Get the global database connection
@@ -50,7 +50,8 @@ pub fn get_db_conn() -> &'static DatabaseConnection {
 
 async fn ensure_db_file(db_url: &str) -> Result<()> {
 	if let Some((_, path)) = db_url.split_once("//") {
-		if !async_std::path::Path::new(path).exists().await {
+		let path_exists = async_std::path::Path::new(path).exists().await;
+		if !path_exists {
 			info!("Creating database file {}", path);
 			async_std::fs::File::create(path).await?;
 		}

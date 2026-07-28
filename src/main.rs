@@ -1,9 +1,21 @@
+#![deny(clippy::all)]
+#![warn(clippy::pedantic)]
+#![allow(
+	clippy::module_name_repetitions,
+	clippy::must_use_candidate,
+	clippy::missing_errors_doc
+)]
+// Temporary: dead_code exists because tide-specific parts (auth, todo_repo, handlers)
+// are being skipped pending the smol-based framework rewrite. Remove this allow after.
+#![allow(dead_code)]
+
 mod auth;
 mod cli;
 mod config;
 mod database;
 mod entity;
 mod logger;
+mod repository;
 mod server;
 mod utils;
 

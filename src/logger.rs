@@ -62,7 +62,7 @@ pub(crate) async fn setup_logger() -> Result<()> {
 /// Where:
 /// - `<filter>`: Target (can be omitted for default)
 /// - `<level>`: Log level (trace, debug, info, warn, error)
-/// - `<module>`: Rust module path (e.g., `jhproxy::tee_reader`)
+/// - `<module>`: Rust module path (e.g., `myapp::tee_reader`)
 ///
 /// # Examples
 ///
@@ -78,22 +78,22 @@ pub(crate) async fn setup_logger() -> Result<()> {
 /// ## Module-Specific Levels
 /// ```rust
 /// // Enable debug for tee_reader module, info for others
-/// update_global_log_level("jhproxy::tee_reader=debug,info");
+/// update_global_log_level("myapp::tee_reader=debug,info");
 ///
 /// // Enable trace for inside module, warn for everything else
-/// update_global_log_level("jhproxy::inside=trace,warn");
+/// update_global_log_level("myapp::inside=trace,warn");
 /// ```
 ///
 /// ## Multiple Module Directives
 /// ```rust
 /// // Different levels for different modules
-/// update_global_log_level("jhproxy::tee_reader=debug,jhproxy::inside=info,warn");
+/// update_global_log_level("myapp::tee_reader=debug,myapp::inside=info,warn");
 /// ```
 ///
 /// ## Crate-Specific Directives
 /// ```rust
-/// // Target all modules in jhproxy crate
-/// update_global_log_level("jhproxy=debug,warn");
+/// // Target all modules in myapp crate
+/// update_global_log_level("myapp=debug,warn");
 /// ```
 ///
 /// ## Common Use Cases
@@ -105,7 +105,7 @@ pub(crate) async fn setup_logger() -> Result<()> {
 /// update_global_log_level("warn");
 ///
 /// # Debug specific component
-/// update_global_log_level("jhproxy::tee_reader=trace,warn");
+/// update_global_log_level("myapp::tee_reader=trace,warn");
 /// ```
 ///
 /// # Error Handling
@@ -121,42 +121,36 @@ pub(crate) async fn setup_logger() -> Result<()> {
 /// - Empty directives are ignored with a warning
 /// - Changes take effect immediately for all subsequent log statements
 pub fn update_global_log_level(directive: &str) -> Result<()> {
-	// for some reason, if set to "trace", the async-std will panic
-	// TODO: change to smol
+	// Known issue: setting the global level to "trace" makes async-std panic
+	// (likely async-std's executor interacting badly with tracing's trace-level spans).
+	// Will be re-evaluated when this template migrates to a smol-based web framework.
 	if directive.starts_with("trace") {
-		bail!("if set global log level to trace, async-std will panic");
+		bail!("global log level 'trace' is not allowed under async-std (panics)");
 	}
-	// 1. 获取全局 Handle
-	if let Some(handle) = GLOBAL_LOG_HANDLE.get() {
-		// 2. 创建新的 Filter
-		let new_filter = EnvFilter::new(directive);
-
-		// 3. 执行 Reload
-		match handle.reload(new_filter) {
-			Ok(_) => {
-				tracing::info!("全局日志级别已更新为: {}", directive);
-				return Ok(());
-			}
-			Err(e) => bail!("日志级别更新失败: {}", e),
-		}
-	} else {
+	let Some(handle) = GLOBAL_LOG_HANDLE.get() else {
 		bail!("日志系统尚未初始化，无法修改级别");
+	};
+	let new_filter = EnvFilter::new(directive);
+	match handle.reload(new_filter) {
+		Ok(_) => {
+			tracing::info!("全局日志级别已更新为: {}", directive);
+			Ok(())
+		}
+		Err(e) => bail!("日志级别更新失败: {}", e),
 	}
 }
 
 pub fn get_global_log_level() -> Result<String> {
-	// 1. 获取全局 Handle
-	if let Some(handle) = GLOBAL_LOG_HANDLE.get() {
-		let mut filter = EnvFilter::new("info");
-		handle
-			.with_current(|x| {
-				filter = x.clone();
-			})
-			.dot()?;
-		return Ok(filter.to_string());
-	} else {
+	let Some(handle) = GLOBAL_LOG_HANDLE.get() else {
 		bail!("日志系统尚未初始化，无法修改级别");
-	}
+	};
+	let mut filter = EnvFilter::new("info");
+	handle
+		.with_current(|x| {
+			filter = x.clone();
+		})
+		.dot()?;
+	Ok(filter.to_string())
 }
 
 // 1. 定义你的 Formatter 结构体
@@ -194,8 +188,8 @@ where
 
 		// --- 字段: request ID ---
 		let mut req_id = utils::get_req_id();
-		if req_id == "" {
-			req_id.push_str("-");
+		if req_id.is_empty() {
+			req_id.push('-');
 		}
 		write!(writer, "{req_id}|")?;
 

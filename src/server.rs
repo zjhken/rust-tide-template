@@ -99,7 +99,7 @@ where
 {
 	let mut resp = Response::new(status);
 	resp.set_body(body);
-	return resp;
+	resp
 }
 
 struct ErrorHandleMiddleware;

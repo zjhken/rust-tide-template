@@ -18,8 +18,7 @@ pub struct RawConfig {
 	#[arg(
 		short,
 		long,
-		env = "APP_BIND",
-		help = "Server address [default: 0.0.0.0:8888]"
+		help = "Server address [env: APP_BIND] [default: 0.0.0.0:8888]"
 	)]
 	pub bind: Option<String>,
 
@@ -27,13 +26,12 @@ pub struct RawConfig {
 	#[arg(
 		short,
 		long,
-		env = "APP_LOG_DIRECTIVE",
-		help = "Log directive [default: info,tide=warn]"
+		help = "Log directive [env: APP_LOG_DIRECTIVE] [default: info,tide=warn]"
 	)]
 	pub log_directive: Option<String>,
 
 	/// Database URL (optional)
-	#[arg(short, long, env = "APP_DB_URL", help = "Database URL (optional)")]
+	#[arg(short, long, help = "Database URL [env: APP_DB_URL] (optional)")]
 	pub db_url: Option<String>,
 }
 
@@ -53,19 +51,36 @@ fn default_log_directive() -> String {
 	"info,tide=warn".to_string()
 }
 
-/// Merge config sources with priority: CLI > config file > env var > default.
+/// Read config from process environment variables.
+fn load_env() -> RawConfig {
+	RawConfig {
+		bind: std::env::var("APP_BIND").ok(),
+		log_directive: std::env::var("APP_LOG_DIRECTIVE").ok(),
+		db_url: std::env::var("APP_DB_URL").ok(),
+	}
+}
+
+/// Merge config sources with priority: CLI > env > file > default.
 ///
-/// Since clap already handles CLI > env var internally (CLI arg wins over env),
-/// `cli` contains the result of that merge. We then layer the config file
-/// between "explicitly set by CLI/env" and "default".
-pub fn merge(cli: RawConfig, file: RawConfig) -> Config {
+/// - `cli`: from clap, only CLI args
+/// - `env`: from process env vars (`APP_*`); per 12-factor, env is deployment-level
+///   and should override application-level file config
+/// - `file`: from TOML config file
+///
+/// Each field falls through `cli.or(env).or(file).or(default)`.
+pub fn merge(cli: RawConfig, env: RawConfig, file: RawConfig) -> Config {
 	Config {
-		bind: cli.bind.or(file.bind).unwrap_or_else(default_addr),
+		bind: cli
+			.bind
+			.or(env.bind)
+			.or(file.bind)
+			.unwrap_or_else(default_addr),
 		log_directive: cli
 			.log_directive
+			.or(env.log_directive)
 			.or(file.log_directive)
 			.unwrap_or_else(default_log_directive),
-		db_url: cli.db_url.or(file.db_url),
+		db_url: cli.db_url.or(env.db_url).or(file.db_url),
 		config_file: None,
 	}
 }
@@ -94,7 +109,8 @@ pub async fn load_config(cli: RawConfig, config_file_path: Option<&str>) -> Resu
 		}
 	};
 
-	let mut config = merge(cli, file_config);
+	let env_config = load_env();
+	let mut config = merge(cli, env_config, file_config);
 	config.config_file = config_file_path.map(|s| s.to_string());
 
 	let mut lock = CONFIG.write().await;
@@ -188,8 +204,9 @@ mod tests {
 	#[test]
 	fn test_merge_all_defaults() {
 		let cli = RawConfig::default();
+		let env = RawConfig::default();
 		let file = RawConfig::default();
-		let config = merge(cli, file);
+		let config = merge(cli, env, file);
 
 		assert_eq!(config.bind, "0.0.0.0:8888");
 		assert_eq!(config.log_directive, "info,tide=warn");
@@ -197,18 +214,23 @@ mod tests {
 	}
 
 	#[test]
-	fn test_merge_cli_overrides_file() {
+	fn test_merge_cli_overrides_env_and_file() {
 		let cli = RawConfig {
 			bind: Some("127.0.0.1:3000".to_string()),
 			log_directive: Some("debug".to_string()),
 			db_url: Some("sqlite:cli.db".to_string()),
+		};
+		let env = RawConfig {
+			bind: Some("127.0.0.1:7000".to_string()),
+			log_directive: Some("trace".to_string()),
+			db_url: Some("sqlite:env.db".to_string()),
 		};
 		let file = RawConfig {
 			bind: Some("0.0.0.0:9999".to_string()),
 			log_directive: Some("warn".to_string()),
 			db_url: Some("sqlite:file.db".to_string()),
 		};
-		let config = merge(cli, file);
+		let config = merge(cli, env, file);
 
 		assert_eq!(config.bind, "127.0.0.1:3000");
 		assert_eq!(config.log_directive, "debug");
@@ -216,14 +238,36 @@ mod tests {
 	}
 
 	#[test]
-	fn test_merge_file_fills_defaults() {
+	fn test_merge_env_overrides_file() {
+		// Critical case: env must beat file per 12-factor.
 		let cli = RawConfig::default();
+		let env = RawConfig {
+			bind: Some("127.0.0.1:7000".to_string()),
+			log_directive: Some("trace".to_string()),
+			db_url: Some("sqlite:env.db".to_string()),
+		};
 		let file = RawConfig {
 			bind: Some("0.0.0.0:9999".to_string()),
 			log_directive: Some("warn".to_string()),
 			db_url: Some("sqlite:file.db".to_string()),
 		};
-		let config = merge(cli, file);
+		let config = merge(cli, env, file);
+
+		assert_eq!(config.bind, "127.0.0.1:7000");
+		assert_eq!(config.log_directive, "trace");
+		assert_eq!(config.db_url, Some("sqlite:env.db".to_string()));
+	}
+
+	#[test]
+	fn test_merge_file_fills_defaults() {
+		let cli = RawConfig::default();
+		let env = RawConfig::default();
+		let file = RawConfig {
+			bind: Some("0.0.0.0:9999".to_string()),
+			log_directive: Some("warn".to_string()),
+			db_url: Some("sqlite:file.db".to_string()),
+		};
+		let config = merge(cli, env, file);
 
 		assert_eq!(config.bind, "0.0.0.0:9999");
 		assert_eq!(config.log_directive, "warn");
@@ -236,12 +280,13 @@ mod tests {
 			bind: Some("127.0.0.1:3000".to_string()),
 			..Default::default()
 		};
+		let env = RawConfig::default();
 		let file = RawConfig {
 			bind: Some("0.0.0.0:9999".to_string()),
 			log_directive: Some("warn".to_string()),
 			db_url: Some("sqlite:file.db".to_string()),
 		};
-		let config = merge(cli, file);
+		let config = merge(cli, env, file);
 
 		assert_eq!(config.bind, "127.0.0.1:3000");
 		assert_eq!(config.log_directive, "warn");
@@ -249,20 +294,25 @@ mod tests {
 	}
 
 	#[test]
-	fn test_merge_file_partial_fills() {
+	fn test_merge_partial_from_each_source() {
+		// Each field can come from a different source.
 		let cli = RawConfig {
 			log_directive: Some("debug".to_string()),
 			..Default::default()
 		};
-		let file = RawConfig {
-			bind: Some("0.0.0.0:9999".to_string()),
+		let env = RawConfig {
+			bind: Some("127.0.0.1:7000".to_string()),
 			..Default::default()
 		};
-		let config = merge(cli, file);
+		let file = RawConfig {
+			db_url: Some("sqlite:file.db".to_string()),
+			..Default::default()
+		};
+		let config = merge(cli, env, file);
 
-		assert_eq!(config.bind, "0.0.0.0:9999");
+		assert_eq!(config.bind, "127.0.0.1:7000");
 		assert_eq!(config.log_directive, "debug");
-		assert_eq!(config.db_url, None);
+		assert_eq!(config.db_url, Some("sqlite:file.db".to_string()));
 	}
 
 	#[test]
