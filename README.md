@@ -7,7 +7,7 @@ Personal starter template for Rust HTTP services. Built on Tide 0.16 + SeaORM + 
 ## Quick start
 
 ```bash
-cp config.example.toml config.toml   # optional, defaults work out of the box
+cp config.example.jhon config.jhon   # optional, defaults work out of the box
 cargo run
 ```
 
@@ -21,7 +21,7 @@ Three sources merged with priority **CLI > env > file > default**:
 |---|---|
 | CLI flag | `cargo run -- --bind 127.0.0.1:9000` |
 | Env var | `APP_BIND=127.0.0.1:9000 cargo run` |
-| Config file | `bind = "127.0.0.1:9000"` in `config.toml` (path via `-c <FILE>`) |
+| Config file | `bind = "127.0.0.1:9000"` in `config.jhon` (path via `-c <FILE>`) |
 | Default | `0.0.0.0:8888` |
 
 Per [12-factor](https://12factor.net/config), **env beats file**: ops can override file values via env without editing the file. CLI beats both.

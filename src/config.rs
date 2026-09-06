@@ -65,7 +65,7 @@ fn load_env() -> RawConfig {
 /// - `cli`: from clap, only CLI args
 /// - `env`: from process env vars (`APP_*`); per 12-factor, env is deployment-level
 ///   and should override application-level file config
-/// - `file`: from TOML config file
+/// - `file`: from JHON config file
 ///
 /// Each field falls through `cli.or(env).or(file).or(default)`.
 pub fn merge(cli: RawConfig, env: RawConfig, file: RawConfig) -> Config {
@@ -94,10 +94,12 @@ pub fn load_config_file(path: &str) -> Result<RawConfig> {
 	let data = std::fs::read_to_string(path)
 		.dot()
 		.context(format!("failed to read config file, path={:?}", path))?;
-	let file_config: RawConfig = toml::from_str(&data)
+	// Empty / comments-only JHON documents parse to `null`; `Option` maps that
+	// to `None` so an all-commented config file falls back to defaults.
+	let file_config: Option<RawConfig> = jhon::from_str(&data)
 		.dot()
 		.context(format!("failed to parse config file, path={:?}", path))?;
-	Ok(file_config)
+	Ok(file_config.unwrap_or_default())
 }
 
 pub async fn load_config(cli: RawConfig, config_file_path: Option<&str>) -> Result<()> {
@@ -319,10 +321,11 @@ mod tests {
 	fn test_load_config_file_valid() {
 		let dir = std::env::temp_dir().join("rust_tide_template_test_config");
 		std::fs::create_dir_all(&dir).unwrap();
-		let path = dir.join("test_config.toml");
+		let path = dir.join("test_config.jhon");
 		std::fs::write(
 			&path,
-			r#"bind = "0.0.0.0:9999"
+			r#"// HTTP 服务器绑定的地址
+bind = "0.0.0.0:9999"
 log_directive = "warn"
 db_url = "sqlite:test.db"
 "#,
@@ -341,7 +344,7 @@ db_url = "sqlite:test.db"
 	fn test_load_config_file_partial() {
 		let dir = std::env::temp_dir().join("rust_tide_template_test_config_partial");
 		std::fs::create_dir_all(&dir).unwrap();
-		let path = dir.join("partial.toml");
+		let path = dir.join("partial.jhon");
 		std::fs::write(
 			&path,
 			r#"bind = "0.0.0.0:7777"
@@ -358,17 +361,39 @@ db_url = "sqlite:test.db"
 	}
 
 	#[test]
+	fn test_load_config_file_comments_only() {
+		// Comments-only JHON parses to null; the file must fall back to defaults.
+		let dir = std::env::temp_dir().join("rust_tide_template_test_config_comments");
+		std::fs::create_dir_all(&dir).unwrap();
+		let path = dir.join("comments.jhon");
+		std::fs::write(
+			&path,
+			r#"// everything commented out
+// bind = "0.0.0.0:1234"
+"#,
+		)
+		.unwrap();
+
+		let raw = load_config_file(path.to_str().unwrap()).unwrap();
+		assert_eq!(raw.bind, None);
+		assert_eq!(raw.log_directive, None);
+		assert_eq!(raw.db_url, None);
+
+		std::fs::remove_dir_all(&dir).ok();
+	}
+
+	#[test]
 	fn test_load_config_file_not_found() {
-		let raw = load_config_file("/nonexistent/path/config.toml").unwrap();
+		let raw = load_config_file("/nonexistent/path/config.jhon").unwrap();
 		assert_eq!(raw.bind, None);
 	}
 
 	#[test]
-	fn test_load_config_file_invalid_toml() {
+	fn test_load_config_file_invalid_jhon() {
 		let dir = std::env::temp_dir().join("rust_tide_template_test_config_invalid");
 		std::fs::create_dir_all(&dir).unwrap();
-		let path = dir.join("invalid.toml");
-		std::fs::write(&path, r#"this is not valid toml [[[["#).unwrap();
+		let path = dir.join("invalid.jhon");
+		std::fs::write(&path, r#"bind = "unterminated"#).unwrap();
 
 		let result = load_config_file(path.to_str().unwrap());
 		assert!(result.is_err());
